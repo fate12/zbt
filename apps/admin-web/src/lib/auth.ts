@@ -2,8 +2,8 @@
  * Shared auth helpers — consistent token extraction for all API calls.
  *
  * Priority:
- *   1. window.__SUPABASE_ACCESS_TOKEN__  (runtime injection by host)
- *   2. Cookie 'access_token'              (set during OAuth redirect)
+ *   1. Cookie 'access_token'
+ *   2. window.__SUPABASE_ACCESS_TOKEN__  (runtime injection by host)
  */
 
 export function getCookie(name: string): string | null {
@@ -18,7 +18,7 @@ export function getCookie(name: string): string | null {
 }
 
 export const getToken = (): string | null => {
-  return (window as any).__SUPABASE_ACCESS_TOKEN__ || getCookie('access_token');
+  return getCookie('access_token') || (window as any).__SUPABASE_ACCESS_TOKEN__ || null;
 };
 
 export function getAuthHeader(): Record<string, string> {
@@ -26,13 +26,19 @@ export function getAuthHeader(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-/**
- * 跳转到钉钉 OAuth 登录页。
- * 登录完成后会通过 continue_url 回到当前页面。
- */
+/** 保存 token 到 cookie（7天有效） */
+export function setToken(token: string): void {
+  const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+  document.cookie = `access_token=${encodeURIComponent(token)}; expires=${expires}; path=/; SameSite=Lax`;
+}
+
+/** 清除 token，跳转登录页 */
+export function clearToken(): void {
+  document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;';
+  (window as any).__SUPABASE_ACCESS_TOKEN__ = undefined;
+}
+
+/** 跳转到登录页 */
 export function redirectToLogin(): void {
-  const gateway = import.meta.env.VITE_AI_GATEWAY_URL || 'https://ai-app.dingtalk.com';
-  const continueUrl = window.location.href;
-  const loginUrl = `${gateway}/oauth/dingtalk-login?continue_url=${encodeURIComponent(continueUrl)}`;
-  window.location.href = loginUrl;
+  window.location.href = '/login';
 }

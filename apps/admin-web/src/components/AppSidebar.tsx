@@ -13,8 +13,9 @@ import {
 } from "@/components/ui/sidebar";
 import { Users, Upload } from "lucide-react";
 import CurrentUser from "@/components/CurrentUser";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { resolveUrl } from "@/lib/url";
+import { clearToken } from "@/lib/auth";
 
 const navItems = [
   { icon: Users, label: "主播管理", path: "/anchors" },
@@ -23,6 +24,12 @@ const navItems = [
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    clearToken();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -51,7 +58,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="px-3 py-3 border-t border-sidebar-border">
-        <CurrentUser />
+        <CurrentUser onLogout={handleLogout} />
       </SidebarFooter>
     </Sidebar>
   );

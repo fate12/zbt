@@ -5,7 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
-import { redirectToLogin } from '@/lib/auth';
+import { clearToken, redirectToLogin } from '@/lib/auth';
 import type { Employee, ApiResponse } from '../types/contacts';
 
 // ============================================================
