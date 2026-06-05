@@ -1,0 +1,25 @@
+{
+  "name": "zhibotong-workspace",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.4.0",
+  "scripts": {
+    "dev:admin": "pnpm --filter @zhibotong/admin-web dev",
+    "dev:user": "pnpm --filter @zhibotong/user-web dev",
+    "dev:api": "pnpm --filter @zhibotong/api dev",
+    "dev:all": "pnpm -r --parallel --stream dev",
+    "build": "pnpm -r build",
+    "build:admin": "pnpm --filter @zhibotong/admin-web build",
+    "build:user": "pnpm --filter @zhibotong/user-web build",
+    "build:api": "pnpm --filter @zhibotong/api build",
+    "lint": "pnpm --filter @zhibotong/admin-web lint && pnpm --filter @zhibotong/user-web lint"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "globals": "^16.5.0",
+    "typescript-eslint": "^8.60.0"
+  }
+}

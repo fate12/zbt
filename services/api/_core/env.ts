@@ -1,0 +1,18 @@
+export const ENV = {
+    aiappPlatformOrigin: process.env.AI_APP_PLATFORM_ORIGIN__ ?? 'https://ai-app.dingtalk.com',
+    supabaseUrl: process.env.SUPABASE_URL ?? '',
+    supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? '',
+    appId: process.env.APP_ID ?? '',
+    corpId: process.env.CORP_ID ?? '',
+    bucketName: process.env.BUCKET_NAME ?? '',
+    dashscopeApiKey: process.env.DASHSCOPE_API_KEY ?? '',
+    dashscopeModel: process.env.DASHSCOPE_MODEL ?? 'qwen-plus',
+    embeddingModel: process.env.EMBEDDING_MODEL ?? 'text-embedding-v3',
+    bailianWorkspaceId: process.env.BAILIAN_WORKSPACE_ID ?? '',
+    bailianDefaultIndexId: process.env.BAILIAN_DEFAULT_INDEX_ID ?? '',
+    bailianAppId: process.env.BAILIAN_APP_ID ?? '',
+    bailianActivityIndexId: process.env.BAILIAN_ACTIVITY_INDEX_ID ?? '',
+    tencentDocsClientId: process.env.TENCENT_DOCS_CLIENT_ID ?? '',
+    tencentDocsAccessToken: process.env.TENCENT_DOCS_ACCESS_TOKEN ?? '',
+    tencentDocsOpenId: process.env.TENCENT_DOCS_OPEN_ID ?? '',
+}

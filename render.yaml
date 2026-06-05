@@ -1,0 +1,22 @@
+services:
+  # 后端 API 服务
+  - type: web
+    name: zhibotong-api
+    runtime: node
+    buildCommand: cd services/api && pnpm install && pnpm build
+    startCommand: cd services/api && node dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+  # 前端应用（如果需要独立部署前端）
+  # - type: site
+  #   name: zhibotong-admin
+  #   buildCommand: pnpm build:admin
+  #   publishDirectory: apps/admin-web/dist
