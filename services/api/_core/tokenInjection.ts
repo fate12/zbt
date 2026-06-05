@@ -4,7 +4,19 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const htmlRoot = path.join(__dirname, '..', '..');
+
+/**
+ * Resolve the admin-web dist root (same logic as index.ts).
+ */
+function resolveAdminDistRoot(): string {
+  const candidates = [
+    path.resolve(__dirname, '..', '..', '..', 'apps', 'admin-web', 'dist'),
+    path.resolve(__dirname, '..', '..', '..', '..', 'apps', 'admin-web', 'dist'),
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates[0];
+}
+
+const adminDistRoot = resolveAdminDistRoot();
 
 /**
  * Token injection middleware for the SPA fallback route.
@@ -28,7 +40,7 @@ export function createTokenInjectionMiddleware() {
       return next();
     }
 
-    const htmlPath = path.join(htmlRoot, 'index.html');
+    const htmlPath = path.join(adminDistRoot, 'index.html');
     fs.readFile(htmlPath, 'utf8', (err: NodeJS.ErrnoException | null, html: string) => {
       if (err) {
         console.error('[TokenInjection] Failed to read index.html:', err);

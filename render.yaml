@@ -3,7 +3,7 @@ services:
   - type: web
     name: zhibotong-api
     runtime: node
-    buildCommand: pnpm install && pnpm build:admin && cd services/api && pnpm install && pnpm build
+    buildCommand: pnpm install && pnpm build:admin && pnpm build:api
     startCommand: cd services/api && node dist/index.js
     envVars:
       - key: NODE_ENV
