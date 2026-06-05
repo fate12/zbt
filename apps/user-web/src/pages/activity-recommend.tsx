@@ -3,11 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sparkles, FileText, Loader2, BookOpen, RefreshCw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { authFetch } from '@/lib/use-auth';
-
-function getToken(): string | null {
-  return localStorage.getItem('zhibotong_token');
-}
+import { apiFetch } from '@/lib/api';
 
 interface SourceDoc {
   title: string;
@@ -33,12 +29,10 @@ export default function ActivityRecommendPage() {
     setError('');
 
     try {
-      const token = getToken();
-      const res = await fetch('/api/activity-recommend', {
+      const res = await apiFetch('/api/activity-recommend', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
 
