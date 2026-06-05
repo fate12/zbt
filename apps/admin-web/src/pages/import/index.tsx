@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Empty } from "@/components/ui/empty";
 import { Upload, Download, Eye, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api";
 
 interface ImportRecord {
   id: number;
@@ -36,7 +37,7 @@ export default function ImportPage() {
 
   const fetchList = () => {
     setLoading(true);
-    fetch(`/api/import/records?page=${page}&pageSize=20`, { headers: { "Content-Type": "application/json" } })
+    apiFetch(`/api/import/records?page=${page}&pageSize=20`)
       .then((res) => res.json())
       .then((result) => { if (result.success) { setList(result.data || []); setTotal(result.total || 0); } setLoading(false); })
       .catch(() => setLoading(false));
@@ -51,7 +52,7 @@ export default function ImportPage() {
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const res = await fetch("/api/import/upload", { method: "POST", body: formData });
+      const res = await apiFetch("/api/import/upload", { method: "POST", body: formData });
       const result = await res.json();
       if (result.success) {
         if (result.data.overwritten) {
@@ -72,7 +73,7 @@ export default function ImportPage() {
   };
 
   const handleDelete = (id: number) => {
-    fetch(`/api/import/records/${id}`, { method: "DELETE", headers: { "Content-Type": "application/json" } })
+    apiFetch(`/api/import/records/${id}`, { method: "DELETE" })
       .then((res) => res.json())
       .then((result) => { if (result.success) { toast.success("删除成功"); fetchList(); } else toast.error(result.error); });
   };
