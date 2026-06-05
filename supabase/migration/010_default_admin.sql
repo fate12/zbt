@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   role VARCHAR(32) DEFAULT 'member',
   corp_id VARCHAR(128),
   created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  updated_at TIMESTAMP DEFAULT NOW()1
 );
 
 -- 创建默认管理员
