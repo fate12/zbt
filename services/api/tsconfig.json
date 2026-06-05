@@ -13,13 +13,5 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["**/*.ts"],
-  "exclude": [
-    "lib/user-context.ts",
-    "middleware/auth.ts",
-    "official-apis/**",
-    "services/contacts/**",
-    "services/department_service.ts",
-    "services/employee_service.ts"
-  ]
+  "include": ["**/*.ts"]
 }
