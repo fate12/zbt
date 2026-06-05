@@ -56,7 +56,8 @@
       "Bash(npm uninstall:*)",
       "Bash(chmod +x /usr/local/bin/render)",
       "Bash(sh)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(ssh -T git@github.com)"
     ]
   }
 }
