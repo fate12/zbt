@@ -1,5 +1,12 @@
 import { getToken } from './auth';
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+
+export function resolveApiUrl(url: string): string {
+  if (!API_BASE || /^https?:\/\//i.test(url)) return url;
+  return `${API_BASE}${url.startsWith('/') ? url : '/' + url}`;
+}
+
 export async function apiFetch(
   url: string,
   options: RequestInit = {}
@@ -14,7 +21,7 @@ export async function apiFetch(
       },
     };
   }
-  return fetch(url, options);
+  return fetch(resolveApiUrl(url), options);
 }
 
 export async function apiPost(url: string, body: unknown): Promise<Response> {

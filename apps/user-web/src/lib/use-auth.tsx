@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext, useCallback } from 'react';
+import { resolveApiUrl } from './api';
 
 interface AuthUser {
   emp_id: string;
@@ -38,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    fetch('/api/auth/me', {
+    fetch(resolveApiUrl('/api/auth/me'), {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -54,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (account_name: string, account_password: string) => {
-    const res = await fetch('/api/auth/login', {
+    const res = await fetch(resolveApiUrl('/api/auth/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ account_name, account_password }),
@@ -93,5 +94,5 @@ export function authFetch(url: string, options: RequestInit = {}) {
       },
     };
   }
-  return fetch(url, options);
+  return fetch(resolveApiUrl(url), options);
 }
