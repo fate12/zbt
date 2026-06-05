@@ -25,3 +25,14 @@ export function getAuthHeader(): Record<string, string> {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
+
+/**
+ * 跳转到钉钉 OAuth 登录页。
+ * 登录完成后会通过 continue_url 回到当前页面。
+ */
+export function redirectToLogin(): void {
+  const gateway = import.meta.env.VITE_AI_GATEWAY_URL || 'https://ai-app.dingtalk.com';
+  const continueUrl = window.location.href;
+  const loginUrl = `${gateway}/oauth/dingtalk-login?continue_url=${encodeURIComponent(continueUrl)}`;
+  window.location.href = loginUrl;
+}

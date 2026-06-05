@@ -5,6 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
+import { redirectToLogin } from '@/lib/auth';
 import type { Employee, ApiResponse } from '../types/contacts';
 
 // ============================================================
@@ -41,6 +42,10 @@ export default function CurrentUser({ onLogout, className, popoverAlign = 'end',
 
     apiFetch('/api/contacts/employees/login/user')
       .then(async (resp) => {
+        if (resp.status === 401) {
+          redirectToLogin();
+          throw new Error('未登录');
+        }
         if (!resp.ok) {
           const body = await resp.text().catch(() => '');
           throw new Error(`请求失败: ${resp.status} ${body}`);

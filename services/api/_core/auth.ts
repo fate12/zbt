@@ -117,11 +117,8 @@ interface PublicRoute {
 const PUBLIC_ROUTES: PublicRoute[] = [
   // ─── 在下方添加免登路由 ───
   { path: '/health' },                              // 健康检查，所有方法免登
-  { path: '/**' },                                  // 开发模式：所有路由免登
-  // { path: '/depts', methods: ['GET'] },           // 仅 GET 免登
-  // { path: '/depts/:id', methods: ['GET'] },       // GET 查看→免登，DELETE 删除→需登录
-  // { path: '/contacts/employees/me' },             // 所有方法免登
-  // { path: '/public/**' },                         // 多段通配符，所有方法免登
+  { path: '/auth/login' },                          // 登录接口，所有方法免登
+  { path: '/auth/me' },                             // 获取当前用户信息，未登录返回 null
 ];
 
 /**
