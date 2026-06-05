@@ -65,25 +65,21 @@ export async function need_login(req: any, res: any, next: any) {
 
     // 需登录接口：必须有有效的用户上下文
     if (!req.user) {
-      const loginUrl = buildLoginRedirectUrl(req);
       const reason = !token ? 'No token found' :  'Token verification failed';
       console.warn(`[NeedLogin] ${reason}, path=${requestPath}`);
       res.status(401).json({
         code: 'UNAUTHORIZED',
         message: '请先登录',
-        login_url: loginUrl,
       });
       return;
     }
 
     next();
   } catch (e) {
-    const loginUrl = buildLoginRedirectUrl(req);
     console.error(`[NeedLogin] Unexpected error during auth. path=${requestPath}, error=`, e);
     res.status(401).json({
       code: 'UNAUTHORIZED',
       message: '认证异常，请重新登录',
-      login_url: loginUrl,
     });
   }
 }
@@ -155,42 +151,6 @@ function isPublicRoute(method: string, requestPath: string): boolean {
     if (rule.methods.map(m => m.toUpperCase()).includes(upperMethod)) return true;
   }
   return false;
-}
-
-/**
- * 构建登录跳转 URL。
- *
- * 将当前请求的完整 URL 作为 continue_url 参数传递给登录页，
- * 同时从 continue_url 中移除 aiapp_auth_token 参数（避免循环），
- * 如果原始请求中携带了 aiapp_auth_token 则单独透传给登录页。
- */
-function buildLoginRedirectUrl(req: any): string {
-  const protocol = req.protocol;
-  const host = req.get('host');
-  const pathname = req.path;
-  const aiappAuthToken = req.query.aiapp_auth_token as string | undefined;
-
-  // 构建干净的 query string，移除 aiapp_auth_token
-  const cleanQueryParts: string[] = [];
-  for (const [key, value] of Object.entries(req.query)) {
-    if (key === 'aiapp_auth_token') continue;
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        cleanQueryParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(item))}`);
-      }
-    } else {
-      cleanQueryParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
-    }
-  }
-
-  const cleanQueryString = cleanQueryParts.length > 0 ? '?' + cleanQueryParts.join('&') : '';
-  const continueUrl = `${protocol}://${host}${pathname}${cleanQueryString}`;
-
-  let loginUrl = `${ENV.aiappPlatformOrigin}/oauth/dingtalk-login?continue_url=${encodeURIComponent(continueUrl)}`;
-  if (aiappAuthToken) {
-    loginUrl += `&aiapp_auth_token=${encodeURIComponent(aiappAuthToken)}`;
-  }
-  return loginUrl;
 }
 
 /**
