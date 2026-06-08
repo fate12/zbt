@@ -8,7 +8,7 @@ export function getCookie(name: string): string | null {
 }
 
 export const getToken = (): string | null => {
-  return (window as any).__SUPABASE_ACCESS_TOKEN__ || getCookie('access_token');
+  return localStorage.getItem('zhibotong_token') || (window as any).__SUPABASE_ACCESS_TOKEN__ || getCookie('access_token');
 };
 
 export function getAuthHeader(): Record<string, string> {
