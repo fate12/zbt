@@ -19,7 +19,7 @@ services:
   - type: web
     name: zhibotong-user
     runtime: static
-    buildCommand: pnpm install --prod=false && pnpm build:user
+    buildCommand: npm install -g pnpm && pnpm install --prod=false && pnpm build:user
     staticPublishPath: apps/user-web/dist
     envVars:
       - key: VITE_API_BASE_URL
