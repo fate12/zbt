@@ -57,7 +57,14 @@
       "Bash(chmod +x /usr/local/bin/render)",
       "Bash(sh)",
       "Bash(pnpm build:*)",
-      "Bash(ssh -T git@github.com)"
+      "Bash(ssh -T git@github.com)",
+      "Bash(pnpm build:admin)",
+      "Bash(kill %1)",
+      "Bash(pnpm --filter @zhibotong/user-web build)",
+      "Bash(grep -E \"\\\\.sql$\")",
+      "Bash(pnpm build:user:*)",
+      "Bash(gh api:*)",
+      "Bash(pnpm build:api:*)"
     ]
   }
 }
