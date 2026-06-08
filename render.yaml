@@ -1,7 +1,7 @@
 services:
   # 后端 API 服务
   - type: web
-    name: zhibotong-api
+    name: zhibotong-api-v2
     runtime: node
     buildCommand: pnpm install --prod=false && pnpm build:admin && pnpm build:api
     startCommand: cd services/api && node dist/index.js
