@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { authFetch } from '@/lib/use-auth';
-import { resolveApiUrl } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 
 function getToken(): string | null {
   return localStorage.getItem('zhibotong_token');
@@ -164,14 +164,10 @@ export function ChatLayout() {
     }
 
     try {
-      const token = getToken();
-      const apiUrl = resolveApiUrl(`/api/chat/sessions/${sessionId}/messages`);
-      console.log('[AI助手] API地址:', apiUrl);
-      const res = await fetch(apiUrl, {
+      const res = await apiFetch(`/api/chat/sessions/${sessionId}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ content: text }),
       });
