@@ -165,7 +165,9 @@ export function ChatLayout() {
 
     try {
       const token = getToken();
-      const res = await fetch(resolveApiUrl(`/api/chat/sessions/${sessionId}/messages`), {
+      const apiUrl = resolveApiUrl(`/api/chat/sessions/${sessionId}/messages`);
+      console.log('[AI助手] API地址:', apiUrl);
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
