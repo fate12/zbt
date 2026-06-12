@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { authFetch } from '@/lib/use-auth';
+import { resolveApiUrl } from '@/lib/api';
 
 function getToken(): string | null {
   return localStorage.getItem('zhibotong_token');
@@ -164,8 +165,7 @@ export function ChatLayout() {
 
     try {
       const token = getToken();
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/chat/sessions/${sessionId}/messages`;
-      const res = await fetch(apiUrl, {
+      const res = await fetch(resolveApiUrl(`/api/chat/sessions/${sessionId}/messages`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
