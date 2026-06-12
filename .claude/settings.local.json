@@ -64,7 +64,10 @@
       "Bash(grep -E \"\\\\.sql$\")",
       "Bash(pnpm build:user:*)",
       "Bash(gh api:*)",
-      "Bash(pnpm build:api:*)"
+      "Bash(pnpm build:api:*)",
+      "Bash(python3 -c \"import sys, json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d, indent=2, ensure_ascii=False\\)\\)\")",
+      "Bash(pnpm dev:user)",
+      "Bash(pnpm dev:api)"
     ]
   }
 }
