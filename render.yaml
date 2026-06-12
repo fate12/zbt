@@ -14,6 +14,14 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: DASHSCOPE_API_KEY
+        sync: false
+      - key: BAILIAN_APP_ID
+        sync: false
+      - key: BAILIAN_WORKSPACE_ID
+        sync: false
+      - key: BAILIAN_DEFAULT_INDEX_ID
+        sync: false
 
   # 用户端前端（静态站点）
   - type: web
