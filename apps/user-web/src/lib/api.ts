@@ -1,6 +1,6 @@
 import { getToken } from './auth';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE = 'https://zhibotong-api-v2.onrender.com';
 
 export function resolveApiUrl(url: string): string {
   if (!API_BASE || /^https?:\/\//i.test(url)) return url;
