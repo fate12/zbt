@@ -164,7 +164,8 @@ export function ChatLayout() {
 
     try {
       const token = getToken();
-      const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/chat/sessions/${sessionId}/messages`;
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
