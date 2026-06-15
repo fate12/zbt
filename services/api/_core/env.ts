@@ -1,6 +1,7 @@
 export const ENV = {
     supabaseUrl: process.env.SUPABASE_URL ?? '',
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? '',
+    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
     appId: process.env.APP_ID ?? '',
     corpId: process.env.CORP_ID ?? '',
     bucketName: process.env.BUCKET_NAME ?? '',

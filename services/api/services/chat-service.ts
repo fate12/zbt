@@ -3,7 +3,10 @@ import { ENV } from '../_core/env.js';
 import { streamBailianAppChat } from './bailian-app-service.js';
 import { retrieve, retrieveAsContext } from './knowledge-base-service.js';
 
-const supabase = createClient(ENV.supabaseUrl, ENV.supabaseAnonKey);
+const supabase = createClient(
+  ENV.supabaseUrl,
+  ENV.supabaseServiceRoleKey || ENV.supabaseAnonKey
+);
 
 // 自动建表
 export async function ensureChatTables() {

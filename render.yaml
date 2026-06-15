@@ -3,16 +3,20 @@ services:
   - type: web
     name: zhibotong-api-v2
     runtime: node
-    buildCommand: pnpm install --prod=false && pnpm build:admin && pnpm build:api
+    buildCommand: corepack enable && corepack prepare pnpm@9.4.0 --activate && pnpm install --frozen-lockfile --prod=false && pnpm build:admin && pnpm build:api
     startCommand: cd services/api && node dist/index.js
     envVars:
       - key: NODE_ENV
         value: production
+      - key: SKIP_INSTALL_DEPS
+        value: true
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: APP_ID
         sync: false
       - key: DASHSCOPE_API_KEY
         sync: false
@@ -22,14 +26,18 @@ services:
         sync: false
       - key: BAILIAN_DEFAULT_INDEX_ID
         sync: false
+      - key: BAILIAN_ACTIVITY_INDEX_ID
+        sync: false
 
   # 用户端前端（静态站点）
   - type: web
     name: zhibotong-user
     runtime: static
-    buildCommand: npm install -g pnpm && pnpm install --prod=false && pnpm build:user
+    buildCommand: corepack enable && corepack prepare pnpm@9.4.0 --activate && pnpm install --frozen-lockfile --prod=false && pnpm build:user
     staticPublishPath: apps/user-web/dist
     envVars:
+      - key: SKIP_INSTALL_DEPS
+        value: true
       - key: VITE_API_BASE_URL
         sync: false
     routes:
