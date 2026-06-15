@@ -1,10 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
 import { ENV } from '../_core/env.js';
 import { retrieve } from './knowledge-base-service.js';
 import { streamBailianAppChat } from './bailian-app-service.js';
 import type { RetrieveDocument } from './knowledge-base-service.js';
+import { createSupabaseClient } from '../lib/supabase.js';
 
-const supabase = createClient(ENV.supabaseUrl, ENV.supabaseAnonKey);
+const supabase = createSupabaseClient(ENV.supabaseUrl, ENV.supabaseAnonKey);
 
 interface AnchorProfile {
   account_name: string;

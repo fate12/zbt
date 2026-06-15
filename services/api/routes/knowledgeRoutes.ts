@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
-import { createClient } from '@supabase/supabase-js';
 import { ENV } from '../_core/env.js';
 import { listIndices } from '../services/knowledge-base-service.js';
+import { createSupabaseClient } from '../lib/supabase.js';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
-const supabase = createClient(ENV.supabaseUrl, ENV.supabaseAnonKey);
+const supabase = createSupabaseClient(ENV.supabaseUrl, ENV.supabaseAnonKey);
 const router = Router();
 
 // 获取知识库列表

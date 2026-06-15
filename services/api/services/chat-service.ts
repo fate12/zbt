@@ -1,9 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
 import { ENV } from '../_core/env.js';
 import { streamBailianAppChat } from './bailian-app-service.js';
 import { retrieve, retrieveAsContext } from './knowledge-base-service.js';
+import { createSupabaseClient } from '../lib/supabase.js';
 
-const supabase = createClient(
+const supabase = createSupabaseClient(
   ENV.supabaseUrl,
   ENV.supabaseServiceRoleKey || ENV.supabaseAnonKey
 );

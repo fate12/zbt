@@ -1,7 +1,8 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { UserContext } from '../lib/user-context.js';
 import { ENV } from './env.js';
 import { verifyCustomToken } from '../services/auth-service.js';
+import { createSupabaseClient } from '../lib/supabase.js';
 
 
 /**
@@ -31,7 +32,7 @@ export async function need_login(req: any, res: any, next: any) {
             app_id: ENV.appId,
           });
           if (!req.supabase) {
-            req.supabase = createClient(ENV.supabaseUrl!, ENV.supabaseAnonKey!);
+            req.supabase = createSupabaseClient(ENV.supabaseUrl!, ENV.supabaseAnonKey!);
           }
         } else {
           // 再尝试 Supabase token
@@ -45,7 +46,7 @@ export async function need_login(req: any, res: any, next: any) {
 
     // 保证所有请求都有 req.supabase（匿名用户用 anon key 创建客户端，受 RLS 控制）
     if (!req.supabase) {
-      req.supabase = createClient(ENV.supabaseUrl!, ENV.supabaseAnonKey!);
+      req.supabase = createSupabaseClient(ENV.supabaseUrl!, ENV.supabaseAnonKey!);
     }
 
     // 免登接口且没有登录用户时，构建访客身份
@@ -168,7 +169,7 @@ function extractToken(req: any): string | null {
  * 返回 { user, supabase } 或 null（验证失败时）。
  */
 async function verifyToken(token: string): Promise<{ user: any; supabase: SupabaseClient } | null> {
-  const supabase = createClient(
+  const supabase = createSupabaseClient(
     ENV.supabaseUrl!,
     ENV.supabaseAnonKey!,
     { global: { headers: { Authorization: `Bearer ${token}` } } }
@@ -192,4 +193,3 @@ function mountUserContext(req: any, user: any, supabase: SupabaseClient): void {
   });
   req.supabase = supabase;
 }
-

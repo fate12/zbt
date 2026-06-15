@@ -1,6 +1,6 @@
 import crypto from 'crypto';
-import { createClient } from '@supabase/supabase-js';
 import { ENV } from '../_core/env.js';
+import { createSupabaseClient } from '../lib/supabase.js';
 
 const TOKEN_SECRET = ENV.supabaseAnonKey; // 用 anon key 作为签名密钥
 const TOKEN_EXPIRY = '7d';
@@ -55,7 +55,7 @@ export function verifyCustomToken(token: string): TokenPayload | null {
 
 // 校验账号密码
 export async function validateCredentials(accountName: string, accountPassword: string) {
-  const supabase = createClient(ENV.supabaseUrl, ENV.supabaseAnonKey);
+  const supabase = createSupabaseClient(ENV.supabaseUrl, ENV.supabaseAnonKey);
 
   const { data, error } = await supabase
     .from('anchor_accounts')
