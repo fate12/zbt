@@ -3,7 +3,7 @@ services:
   - type: web
     name: zhibotong-api-v2
     runtime: node
-    buildCommand: corepack enable && corepack prepare pnpm@9.4.0 --activate && pnpm install --frozen-lockfile --prod=false && pnpm build:admin && pnpm build:api
+    buildCommand: corepack enable && corepack prepare pnpm@9.4.0 --activate && pnpm install --frozen-lockfile --prod=false --ignore-scripts && pnpm build:admin && pnpm build:api
     startCommand: cd services/api && node dist/index.js
     envVars:
       - key: NODE_ENV
@@ -33,7 +33,7 @@ services:
   - type: web
     name: zhibotong-user
     runtime: static
-    buildCommand: corepack enable && corepack prepare pnpm@9.4.0 --activate && pnpm install --frozen-lockfile --prod=false && pnpm build:user
+    buildCommand: corepack enable && corepack prepare pnpm@9.4.0 --activate && pnpm install --frozen-lockfile --prod=false --ignore-scripts && pnpm build:user
     staticPublishPath: apps/user-web/dist
     envVars:
       - key: SKIP_INSTALL_DEPS
