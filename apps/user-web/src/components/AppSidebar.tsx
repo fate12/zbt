@@ -17,17 +17,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen w-full">
       {/* 侧边导航 */}
       <nav className="w-16 flex flex-col items-center py-4 border-r bg-muted/30">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground mb-4">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground mb-5 shadow-sm">
           <MessageSquare className="h-5 w-5" />
         </div>
 
         <Link
           to="/chat"
           className={cn(
-            'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
+            'flex h-11 w-11 items-center justify-center rounded-xl transition-all',
             location.pathname === '/chat' || location.pathname === '/'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              ? 'bg-primary text-primary-foreground shadow-sm scale-105'
+              : 'text-muted-foreground hover:bg-accent hover:scale-105'
           )}
         >
           <MessageSquare className="h-5 w-5" />
@@ -36,10 +36,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <Link
           to="/activity-recommend"
           className={cn(
-            'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
+            'flex h-11 w-11 items-center justify-center rounded-xl transition-all mt-2',
             location.pathname === '/activity-recommend'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              ? 'bg-primary text-primary-foreground shadow-sm scale-105'
+              : 'text-muted-foreground hover:bg-accent hover:scale-105'
           )}
           title="活动推荐"
         >
@@ -49,11 +49,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* 底部用户头像 + 退出 */}
         <div className="mt-auto">
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors">
+            <DropdownMenuTrigger className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-accent/20 text-primary text-sm font-semibold hover:from-primary/30 hover:to-accent/30 transition-all">
               {user?.name?.charAt(0) || '?'}
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="end">
-              <div className="px-2 py-1.5 text-sm font-medium">{user?.name}</div>
+              <div className="px-3 py-2 text-sm font-medium">{user?.name}</div>
               <DropdownMenuItem onClick={logout} className="text-destructive">
                 <LogOut className="h-4 w-4" />
                 退出登录

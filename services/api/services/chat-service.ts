@@ -197,3 +197,109 @@ export async function* streamChat(
 
   console.log(`[聊天] 会话 ${sessionId} 处理完成`);
 }
+
+// ==================== 活动推荐存储 ====================
+
+interface ActivityRecommend {
+  id: string;
+  emp_id: string;
+  corp_id: string;
+  content: string;
+  sources: any[];
+  created_at: string;
+}
+
+// 获取用户最近的活动推荐
+export async function getLastActivityRecommend(empId: string): Promise<ActivityRecommend | null> {
+  const { data, error } = await supabase
+    .from('activity_recommends')
+    .select('*')
+    .eq('emp_id', empId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (error) throw error;
+  return data && data.length > 0 ? data[0] : null;
+}
+
+// 保存活动推荐
+export async function saveActivityRecommend(
+  empId: string,
+  corpId: string,
+  content: string,
+  sources: any[]
+): Promise<ActivityRecommend> {
+  console.log('[activity-recommend] 开始保存推荐:', { empId, contentLength: content.length, sourcesCount: sources.length });
+
+  // 先删除该用户旧的推荐（保持只有一条）
+  const { error: deleteError } = await supabase.from('activity_recommends').delete().eq('emp_id', empId);
+  if (deleteError) {
+    console.error('[activity-recommend] 删除旧推荐失败:', deleteError);
+  }
+
+  // 插入新推荐
+  const { data, error } = await supabase
+    .from('activity_recommends')
+    .insert({
+      emp_id: empId,
+      corp_id: corpId,
+      content,
+      sources,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[activity-recommend] 保存失败:', error);
+    throw error;
+  }
+
+  console.log('[activity-recommend] 保存成功:', data.id);
+  return data;
+}
+
+// 在 ensureChatTables 中添加活动推荐表
+export async function ensureActivityRecommendTable() {
+  try {
+    // 检测表是否存在
+    const { error: checkErr } = await supabase.from('activity_recommends').select('id').limit(1);
+    if (!checkErr) {
+      console.log('[activity-recommend] 表已存在，跳过创建');
+      return;
+    }
+
+    console.log('[activity-recommend] 创建活动推荐表...');
+
+    const sql = `
+      CREATE TABLE IF NOT EXISTS activity_recommends (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        corp_id text DEFAULT '',
+        emp_id text NOT NULL DEFAULT 'visitor',
+        content text NOT NULL DEFAULT '',
+        sources jsonb DEFAULT '[]'::jsonb,
+        created_at timestamptz DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS idx_activity_recommends_emp_id ON activity_recommends(emp_id);
+      ALTER TABLE activity_recommends ENABLE ROW LEVEL SECURITY;
+      CREATE POLICY "Allow all on activity_recommends" ON activity_recommends FOR ALL USING (true) WITH CHECK (true);
+    `;
+
+    const res = await fetch(`${ENV.supabaseUrl}/rest/v1/rpc/`, {
+      method: 'POST',
+      headers: {
+        apikey: ENV.supabaseAnonKey,
+        Authorization: `Bearer ${ENV.supabaseAnonKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query: sql }),
+    });
+
+    if (!res.ok) {
+      console.warn('[activity-recommend] 无法自动建表');
+    } else {
+      console.log('[activity-recommend] 表创建成功');
+    }
+  } catch (e) {
+    console.warn('[activity-recommend] 自动建表失败');
+  }
+}

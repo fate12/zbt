@@ -57,7 +57,7 @@ import importRoutes from './routes/importRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import activityRecommendRoutes from './routes/activityRecommendRoutes.js';
-import { ensureChatTables } from './services/chat-service.js';
+import { ensureChatTables, ensureActivityRecommendTable } from './services/chat-service.js';
 
 app.use('/api/anchors', anchorRoutes);
 app.use('/api/import', importRoutes);
@@ -75,6 +75,7 @@ const PORT = process.env.PORT || 9000;
 
 app.listen(PORT, async () => {
   await ensureChatTables();
+  await ensureActivityRecommendTable();
   console.log(`Server running on http://localhost:${PORT}`);
 });
 

@@ -27,10 +27,6 @@ import ReactMarkdown from 'react-markdown';
 import { authFetch } from '@/lib/use-auth';
 import { apiFetch } from '@/lib/api';
 
-function getToken(): string | null {
-  return localStorage.getItem('zhibotong_token');
-}
-
 interface Session {
   id: string;
   title: string;
@@ -51,11 +47,14 @@ export function ChatLayout() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const loadSessions = useCallback(async () => {
+    setSessionsLoading(true);
     try {
       const res = await authFetch('/api/chat/sessions');
       if (res.ok) {
@@ -64,10 +63,13 @@ export function ChatLayout() {
       }
     } catch (e) {
       console.error('加载会话失败', e);
+    } finally {
+      setSessionsLoading(false);
     }
   }, []);
 
   const loadMessages = useCallback(async (sessionId: string) => {
+    setMessagesLoading(true);
     try {
       const res = await authFetch(`/api/chat/sessions/${sessionId}/messages`);
       if (res.ok) {
@@ -76,6 +78,8 @@ export function ChatLayout() {
       }
     } catch (e) {
       console.error('加载消息失败', e);
+    } finally {
+      setMessagesLoading(false);
     }
   }, []);
 
@@ -83,7 +87,10 @@ export function ChatLayout() {
 
   useEffect(() => {
     if (activeSessionId) loadMessages(activeSessionId);
-    else setMessages([]);
+    else {
+      setMessages([]);
+      setMessagesLoading(false);
+    }
   }, [activeSessionId, loadMessages]);
 
   useEffect(() => {
@@ -261,25 +268,32 @@ export function ChatLayout() {
           sidebarOpen ? 'w-72' : 'w-0 overflow-hidden'
         )}
       >
-        <div className="flex items-center justify-between p-3 border-b">
-          <span className="text-sm font-semibold">对话历史</span>
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <span className="text-base font-semibold text-foreground">对话历史</span>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleNewSession}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-        <ScrollArea className="flex-1">
-          <div className="p-2 space-y-1">
-            {sessions.map((session) => (
+        <ScrollArea className="flex-1 rounded-xl">
+          <div className="px-3 py-3 space-y-1.5">
+            {sessionsLoading ? (
+              <SessionListSkeleton />
+            ) : sessions.map((session) => (
               <div
                 key={session.id}
                 className={cn(
-                  'group flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-accent transition-colors',
-                  activeSessionId === session.id && 'bg-accent text-accent-foreground'
+                  'group flex items-center gap-3 rounded-xl px-3 py-2.5 cursor-pointer transition-all',
+                  activeSessionId === session.id
+                    ? 'bg-primary/90 text-primary-foreground shadow-sm'
+                    : 'hover:bg-accent/80'
                 )}
                 onClick={() => setActiveSessionId(session.id)}
               >
-                <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="flex-1 truncate">{session.title}</span>
+                <MessageSquare className={cn(
+                  'h-4 w-4 shrink-0',
+                  activeSessionId === session.id ? 'text-primary-foreground' : 'text-muted-foreground'
+                )} />
+                <span className="flex-1 truncate text-sm font-medium">{session.title}</span>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -306,7 +320,7 @@ export function ChatLayout() {
                 </DropdownMenu>
               </div>
             ))}
-            {sessions.length === 0 && (
+            {!sessionsLoading && sessions.length === 0 && (
               <div className="py-8 text-center text-sm text-muted-foreground">
                 暂无对话，点击 + 开始
               </div>
@@ -333,7 +347,8 @@ export function ChatLayout() {
 
         <ScrollArea className="flex-1">
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-            {messages.length === 0 && !activeSessionId && (
+            {messagesLoading && <MessageListSkeleton />}
+            {!messagesLoading && messages.length === 0 && !activeSessionId && (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                 <Bot className="h-12 w-12 mb-4 text-primary/50" />
                 <h2 className="text-lg font-medium mb-2">直播通 AI 助手</h2>
@@ -356,7 +371,7 @@ export function ChatLayout() {
                 </div>
               </div>
             )}
-            {messages.map((msg) => (
+            {!messagesLoading && messages.map((msg) => (
               <div
                 key={msg.id}
                 className={cn(
@@ -465,6 +480,45 @@ export function ChatLayout() {
               AI 助手回答仅供参考
             </p>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SessionListSkeleton() {
+  return (
+    <div className="space-y-1.5 animate-in fade-in-0 duration-200">
+      {Array.from({ length: 6 }).map((_, idx) => (
+        <div key={idx} className="flex items-center gap-3 rounded-xl px-3 py-2.5">
+          <div className="h-4 w-4 shrink-0 rounded bg-muted-foreground/10" />
+          <div className="h-4 flex-1 rounded bg-muted-foreground/10" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MessageListSkeleton() {
+  return (
+    <div className="space-y-6 animate-in fade-in-0 duration-200">
+      <div className="flex gap-3">
+        <div className="h-8 w-8 shrink-0 rounded-full bg-muted-foreground/10" />
+        <div className="w-full max-w-[72%] space-y-2 rounded-xl bg-muted px-4 py-3">
+          <div className="h-4 w-2/3 rounded bg-muted-foreground/10" />
+          <div className="h-4 w-full rounded bg-muted-foreground/10" />
+          <div className="h-4 w-5/6 rounded bg-muted-foreground/10" />
+        </div>
+      </div>
+      <div className="flex flex-row-reverse gap-3">
+        <div className="h-8 w-8 shrink-0 rounded-full bg-muted-foreground/10" />
+        <div className="h-11 w-56 rounded-xl bg-muted-foreground/10" />
+      </div>
+      <div className="flex gap-3">
+        <div className="h-8 w-8 shrink-0 rounded-full bg-muted-foreground/10" />
+        <div className="w-full max-w-[68%] space-y-2 rounded-xl bg-muted px-4 py-3">
+          <div className="h-4 w-full rounded bg-muted-foreground/10" />
+          <div className="h-4 w-4/5 rounded bg-muted-foreground/10" />
         </div>
       </div>
     </div>

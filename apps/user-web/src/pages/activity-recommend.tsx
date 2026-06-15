@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sparkles, FileText, Loader2, BookOpen, RefreshCw } from 'lucide-react';
+import { Sparkles, FileText, Loader2, BookOpen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { apiFetch } from '@/lib/api';
 
@@ -16,7 +16,29 @@ export default function ActivityRecommendPage() {
   const [content, setContent] = useState('');
   const [sources, setSources] = useState<SourceDoc[]>([]);
   const [error, setError] = useState('');
+  const [initialLoading, setInitialLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 从服务器加载最近的推荐
+  useEffect(() => {
+    const loadLastRecommend = async () => {
+      try {
+        const res = await apiFetch('/api/activity-recommend/last');
+        if (res.ok) {
+          const result = await res.json();
+          if (result.success && result.data) {
+            setContent(result.data.content || '');
+            setSources(result.data.sources || []);
+          }
+        }
+      } catch {
+        // ignore errors
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    loadLastRecommend();
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -108,8 +130,10 @@ export default function ActivityRecommendPage() {
       {/* 内容区 */}
       <ScrollArea className="flex-1">
         <div className="max-w-3xl mx-auto px-6 py-6 space-y-6">
+          {initialLoading && <ActivityRecommendSkeleton />}
+
           {/* 空状态 */}
-          {!hasResult && !loading && !error && (
+          {!initialLoading && !hasResult && !loading && !error && (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
               <Sparkles className="h-12 w-12 mb-4 text-primary/50" />
               <h2 className="text-lg font-medium mb-2">智能活动推荐</h2>
@@ -118,14 +142,14 @@ export default function ActivityRecommendPage() {
           )}
 
           {/* 错误提示 */}
-          {error && (
+          {!initialLoading && error && (
             <div className="rounded-xl border border-destructive/50 bg-destructive/5 p-4 text-sm text-destructive">
               {error}
             </div>
           )}
 
           {/* 匹配的知识库文档 */}
-          {sources.length > 0 && (
+          {!initialLoading && sources.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <BookOpen className="h-4 w-4" />
@@ -162,7 +186,7 @@ export default function ActivityRecommendPage() {
           )}
 
           {/* AI推荐内容 */}
-          {(content || loading) && (
+          {!initialLoading && (content || loading) && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Sparkles className="h-4 w-4" />
@@ -186,6 +210,45 @@ export default function ActivityRecommendPage() {
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
+    </div>
+  );
+}
+
+function ActivityRecommendSkeleton() {
+  return (
+    <div className="space-y-6 animate-in fade-in-0 duration-200">
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 rounded bg-muted-foreground/10" />
+          <div className="h-4 w-36 rounded bg-muted-foreground/10" />
+        </div>
+        <div className="grid gap-3">
+          {Array.from({ length: 2 }).map((_, idx) => (
+            <div key={idx} className="rounded-xl border p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 h-4 w-4 shrink-0 rounded bg-muted-foreground/10" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="h-4 w-2/3 rounded bg-muted-foreground/10" />
+                  <div className="h-3 w-full rounded bg-muted-foreground/10" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 rounded bg-muted-foreground/10" />
+          <div className="h-4 w-28 rounded bg-muted-foreground/10" />
+        </div>
+        <div className="space-y-2 rounded-xl border p-4">
+          <div className="h-4 w-5/6 rounded bg-muted-foreground/10" />
+          <div className="h-4 w-full rounded bg-muted-foreground/10" />
+          <div className="h-4 w-11/12 rounded bg-muted-foreground/10" />
+          <div className="h-4 w-2/3 rounded bg-muted-foreground/10" />
+        </div>
+      </div>
     </div>
   );
 }
