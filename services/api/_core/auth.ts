@@ -115,6 +115,7 @@ const PUBLIC_ROUTES: PublicRoute[] = [
   { path: '/health' },                              // 健康检查，所有方法免登
   { path: '/auth/login' },                          // 登录接口，所有方法免登
   { path: '/auth/me' },                             // 获取当前用户信息，未登录返回 null
+  { path: '/chat/**' },                             // AI助手接口，所有方法免登（访客模式）
 ];
 
 /**
