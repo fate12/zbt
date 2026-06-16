@@ -2,10 +2,46 @@ import { Router, Request, Response } from 'express';
 import { streamActivityRecommendation } from '../services/activity-recommend-service.js';
 import {
   getLastActivityRecommend,
+  listActivityRecommends,
+  deleteActivityRecommend,
   saveActivityRecommend,
 } from '../services/chat-service.js';
 
 const router = Router();
+
+// 获取活动推荐历史列表（按时间倒序）
+router.get('/history', async (req: Request, res: Response) => {
+  try {
+    const empId = (req as any).user?.emp_id || 'visitor';
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string, 10) || 50, 1), 200);
+    const list = await listActivityRecommends(empId, limit);
+
+    res.json({
+      success: true,
+      data: list.map((item) => ({
+        id: item.id,
+        content: item.content,
+        sources: item.sources || [],
+        created_at: item.created_at,
+      })),
+    });
+  } catch (e: any) {
+    console.error('获取活动推荐历史失败:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 删除单条活动推荐
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const empId = (req as any).user?.emp_id || 'visitor';
+    const deleted = await deleteActivityRecommend(req.params.id, empId);
+    res.json({ success: true, data: { deleted } });
+  } catch (e: any) {
+    console.error('删除活动推荐失败:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
 // 获取最近的活动推荐
 router.get('/last', async (req: Request, res: Response) => {

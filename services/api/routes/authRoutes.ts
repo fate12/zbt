@@ -1,5 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { validateCredentials, generateToken, verifyCustomToken } from '../services/auth-service.js';
+import {
+  validateCredentials,
+  generateToken,
+  verifyCustomToken,
+  getAnchorUserProfile,
+} from '../services/auth-service.js';
 
 const router = Router();
 
@@ -29,7 +34,7 @@ router.post('/login', async (req: Request, res: Response) => {
       success: true,
       data: {
         token,
-        user: { emp_id: user.emp_id, name: user.name, corp_id: user.corp_id },
+        user,
       },
     });
   } catch (e: any) {
@@ -52,12 +57,17 @@ router.get('/me', async (req: any, res: Response) => {
     return;
   }
 
+  const profile = await getAnchorUserProfile(payload.emp_id);
+
   res.json({
     success: true,
-    data: {
+    data: profile || {
       emp_id: payload.emp_id,
       name: payload.name,
       corp_id: payload.corp_id,
+      track_description: '',
+      tags: [],
+      interests: [],
     },
   });
 });

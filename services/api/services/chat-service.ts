@@ -222,7 +222,32 @@ export async function getLastActivityRecommend(empId: string): Promise<ActivityR
   return data && data.length > 0 ? data[0] : null;
 }
 
-// 保存活动推荐
+// 获取用户的活动推荐历史列表（按时间倒序，全部保留）
+export async function listActivityRecommends(empId: string, limit = 50): Promise<ActivityRecommend[]> {
+  const { data, error } = await supabase
+    .from('activity_recommends')
+    .select('*')
+    .eq('emp_id', empId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data || [];
+}
+
+// 删除单条活动推荐（带 emp_id 校验，防越权）
+export async function deleteActivityRecommend(id: string, empId: string): Promise<boolean> {
+  const { error, count } = await supabase
+    .from('activity_recommends')
+    .delete({ count: 'exact' })
+    .eq('id', id)
+    .eq('emp_id', empId);
+
+  if (error) throw error;
+  return (count ?? 0) > 0;
+}
+
+// 保存活动推荐（保留全部历史，不再删除旧记录）
 export async function saveActivityRecommend(
   empId: string,
   corpId: string,
@@ -231,13 +256,6 @@ export async function saveActivityRecommend(
 ): Promise<ActivityRecommend> {
   console.log('[activity-recommend] 开始保存推荐:', { empId, contentLength: content.length, sourcesCount: sources.length });
 
-  // 先删除该用户旧的推荐（保持只有一条）
-  const { error: deleteError } = await supabase.from('activity_recommends').delete().eq('emp_id', empId);
-  if (deleteError) {
-    console.error('[activity-recommend] 删除旧推荐失败:', deleteError);
-  }
-
-  // 插入新推荐
   const { data, error } = await supabase
     .from('activity_recommends')
     .insert({

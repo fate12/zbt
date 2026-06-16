@@ -5,6 +5,9 @@ interface AuthUser {
   emp_id: string;
   name: string;
   corp_id: string;
+  track_description?: string;
+  tags?: string[];
+  interests?: string[];
 }
 
 interface AuthContextValue {
