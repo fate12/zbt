@@ -14,7 +14,7 @@ import {
   PanelLeftClose,
   PanelLeft,
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import Markdown from '@/components/Markdown';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/use-auth';
 
@@ -362,9 +362,7 @@ export default function ActivityRecommendPage() {
                 </div>
                 <div className="rounded-xl border p-4">
                   {displayContent ? (
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
-                      <ReactMarkdown>{displayContent}</ReactMarkdown>
-                    </div>
+                    <Markdown>{displayContent}</Markdown>
                   ) : (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />

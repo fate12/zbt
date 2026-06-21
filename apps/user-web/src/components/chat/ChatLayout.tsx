@@ -23,7 +23,7 @@ import {
   PanelLeftClose,
   PanelLeft,
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import Markdown from '@/components/Markdown';
 import { authFetch } from '@/lib/use-auth';
 import { apiFetch } from '@/lib/api';
 
@@ -406,9 +406,7 @@ export function ChatLayout() {
                   >
                     {msg.role === 'assistant' ? (
                       msg.content ? (
-                        <div className="markdown-body">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
-                        </div>
+                        <Markdown>{msg.content}</Markdown>
                       ) : (
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       )

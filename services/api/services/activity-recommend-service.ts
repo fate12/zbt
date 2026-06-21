@@ -26,7 +26,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ACTIVITIES_PATH = path.resolve(__dirname, '../data/activities.json');
 
 /**
- * 读取本地活动数据（由 scripts/gen-activities-json.js 从 Excel 生成）。
+ * 读取本地活动数据（由 scripts/gen-activities-json.cjs 从 Excel 生成）。
  * 用本地数据做确定性板块匹配，不依赖向量检索（稀疏数据下召回不稳定）。
  */
 function loadActivities(): Activity[] {
@@ -151,16 +151,7 @@ export async function* streamActivityRecommendation(
     return;
   }
 
-  // 3. 返回匹配的活动（供前端展示来源）
-  const sources: RetrieveDocument[] = matched.map((a, i) => ({
-    id: String(i + 1),
-    title: a['活动名称'],
-    content: formatActivity(a, i + 1),
-    score: 1,
-  }));
-  yield { type: 'sources', sources };
-
-  // 4. 构建上下文并调用百炼应用生成推荐
+  // 3. 直接构建上下文调用百炼应用生成推荐（不向前端推送匹配文档列表，检索阶段快速跳过）
   const knowledgeContext = matched.map((a, i) => formatActivity(a, i + 1)).join('\n\n---\n\n');
 
   const prompt = `你是一个活动推荐助手。根据主播赛道判定其所属板块，只从该板块的活动里推荐。
@@ -181,9 +172,20 @@ export async function* streamActivityRecommendation(
 ${knowledgeContext}
 
 ## 输出要求
-1. 每个推荐活动以「活动名称」开头，给出推荐理由
-2. 多个活动按匹配度从高到低排列
-3. 报名链接：对每个推荐活动，若其数据中包含【报名链接1】或【报名链接2】，必须在该活动信息中原样输出链接（URL 或链接标题），格式为「报名链接：xxx」。若无报名链接字段则不输出该项`;
+按匹配度从高到低，只推荐最相关的 3 个活动，严格使用以下格式输出，不要任何开场白或总结语：
+
+### <活动名称>
+- 推荐理由：<结合主播赛道/标签/兴趣说明为什么推荐，1-2句话>
+- 报名链接：<原样输出该活动的【报名链接1】（已是 markdown 链接 [文字](URL) 形式），若【报名链接1】为空则用【报名链接2】；若两者都为空，整行不输出>
+
+---
+
+规则：
+- 只推荐 3 个活动，按匹配度从高到低排列
+- 活动名称必须与数据中【活动名称】完全一致，不得改写或自创
+- 报名链接只能来自该活动自身的【报名链接1/报名链接2】字段，禁止借用其他活动的链接
+- 报名链接必须保持 markdown 链接 [文字](URL) 原样输出，禁止拆解成纯文字、禁止省略 URL
+- 每个活动块之间用「---」分隔线隔开，块内不留多余空行`;
 
   try {
     // 使用现有百炼应用生成推荐（带知识库检索增强）

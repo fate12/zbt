@@ -74,7 +74,32 @@
       "Bash(grep -r \"husky\" /Users/laityluo/Desktop/default/package.json /Users/laityluo/Desktop/default/apps/*/package.json)",
       "Bash(pnpm --filter @zhibotong/api dev)",
       "Bash(echo \"exit: $?\")",
-      "Bash(pnpm dev:admin *)"
+      "Bash(pnpm dev:admin *)",
+      "Read(//Users/liuyuanyuan/.nvm/versions/node/**)",
+      "Bash(command -v pnpm)",
+      "Read(//Users/liuyuanyuan/.local/share/**)",
+      "Read(//Users/liuyuanyuan/**)",
+      "Bash(corepack enable *)",
+      "Bash(corepack prepare *)",
+      "Bash(/Users/liuyuanyuan/.nvm/versions/node/v20.20.2/bin/pnpm --version)",
+      "Bash(corepack pnpm *)",
+      "Bash(/Users/liuyuanyuan/.nvm/versions/node/v20.20.2/bin/pnpm dev:api *)",
+      "Bash(/Users/liuyuanyuan/.nvm/versions/node/v20.20.2/bin/pnpm dev:user *)",
+      "Bash(/Users/liuyuanyuan/.nvm/versions/node/v20.20.2/bin/pnpm install *)",
+      "Bash(awk *)",
+      "Bash(lsof -nP -iTCP:9000 -sTCP:LISTEN)",
+      "Bash(grep -oE \"llm-[a-z0-9]{10,}\")",
+      "Bash(echo \"=== exit: $? ===\")",
+      "Bash(gh auth *)",
+      "Bash(ssh -o StrictHostKeyChecking=accept-new -T git@github.com)",
+      "Bash(ssh-add -l)",
+      "Bash(ssh -vT git@github.com)",
+      "Bash(ssh-keygen -y -P \"\" -f ~/.ssh/id_ed25519)",
+      "Bash(./services/api/node_modules/.bin/tsx -e ' *)",
+      "Bash(lsof -nP -iTCP:5174 -sTCP:LISTEN)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 scripts/xlsx_to_kb_md.py)",
+      "Bash(python3 *)"
     ]
   }
 }
