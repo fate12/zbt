@@ -58,6 +58,27 @@ export function buildSearchQuery(profile: AnchorProfile): string {
   return parts.join(' ');
 }
 
+// 板块关键词表：活动表格【所属板块】目前只有 娱乐 / 游戏 两类
+const BOARD_KEYWORDS: Record<string, string[]> = {
+  '游戏': ['游戏', '电竞', '手游', '端游', '主机', '单机', '网游', '王者', '英雄联盟', 'lol', '吃鸡', '绝地', 'fps', 'moba', 'rpg', '竞技', '射击', '策略', '卡牌', '洛克', '原神', '梦幻'],
+  '娱乐': ['娱乐', '唱', '跳', '颜', '才艺', '舞蹈', '音乐', '唱歌', '聊天', '电台', 'asmr', '户外', '美食', '脱口秀', '情感', '颜值', '声优', 'cos'],
+};
+
+/**
+ * 根据主播赛道/标签/兴趣判定所属板块（娱乐 / 游戏）
+ * 关键词命中多者胜出；均未命中或平票时默认「娱乐」（活动覆盖最广）。
+ */
+export function classifyBoard(profile: AnchorProfile): string {
+  const text = `${profile.track_description} ${profile.tags.join(' ')} ${profile.interests.join(' ')}`.toLowerCase();
+  const scores: Record<string, number> = { '游戏': 0, '娱乐': 0 };
+  for (const [board, kws] of Object.entries(BOARD_KEYWORDS)) {
+    for (const kw of kws) {
+      if (text.includes(kw)) scores[board]++;
+    }
+  }
+  return scores['游戏'] > scores['娱乐'] ? '游戏' : '娱乐';
+}
+
 /**
  * 流式活动推荐主流程
  * 使用知识库索引 12jffy38ih 检索活动数据，再用百炼应用生成推荐
@@ -76,15 +97,16 @@ export async function* streamActivityRecommendation(
     return;
   }
 
-  // 2. 构建搜索词
-  const searchQuery = buildSearchQuery(profile);
+  // 2. 判定所属板块，并构建检索词（前置板块词，提升检索对同板块活动的命中率）
+  const board = classifyBoard(profile);
+  const searchQuery = `${board} ${buildSearchQuery(profile)}`.trim();
 
-  if (!searchQuery.trim()) {
+  if (!buildSearchQuery(profile).trim()) {
     yield { type: 'content', content: '请先在后台管理系统中完善您的赛道描述、标签和兴趣偏好信息，才能获取个性化活动推荐。' };
     return;
   }
 
-  console.log(`[活动推荐] 搜索词: ${searchQuery}`);
+  console.log(`[活动推荐] 所属板块: ${board} | 搜索词: ${searchQuery}`);
 
   // 3. 知识库检索（使用活动推荐专用索引 12jffy38ih）
   let documents: RetrieveDocument[] = [];
@@ -111,10 +133,16 @@ export async function* streamActivityRecommendation(
     .map((doc, idx) => `[${idx + 1}] ${doc.title}\n${doc.content}`)
     .join('\n\n---\n\n');
 
-  const prompt = `你是一个活动推荐助手。根据以下主播信息和知识库中匹配的活动数据，为该主播推荐最合适的活动。
+  const prompt = `你是一个活动推荐助手。根据主播赛道判定其所属板块，只从知识库同板块的活动里推荐。
+
+## 匹配规则（必须严格遵守）
+1. 该主播所属板块已判定为【${board}】（依据其赛道介绍）
+2. 只能从知识库中【所属板块=${board}】的活动里挑选推荐，禁止推荐其他板块的活动
+3. 在同板块活动内，再按主播的具体标签/兴趣偏好，以及【报名对象】是否匹配主播类型（老主播/新主播/不限制）排序
 
 ## 主播信息
 - 账号名称：${profile.account_name}
+- 所属板块：${board}
 - 赛道：${profile.track_description || '未设置'}
 - 标签：${profile.tags.length > 0 ? profile.tags.join('、') : '未设置'}
 - 兴趣偏好：${profile.interests.length > 0 ? profile.interests.join('、') : '未设置'}
@@ -122,11 +150,10 @@ export async function* streamActivityRecommendation(
 ## 知识库匹配的活动数据
 ${knowledgeContext || '（未匹配到相关活动数据）'}
 
-## 要求
-请根据以上信息，为该主播推荐最适合的活动。要求：
-1. 优先推荐与主播赛道和兴趣最匹配的活动
-2. 给出推荐理由
-3. 如果有多个匹配活动，按匹配度从高到低排列`;
+## 输出要求
+1. 每个推荐活动以「活动名称」开头，给出推荐理由
+2. 多个活动按匹配度从高到低排列
+3. 报名链接：对每个推荐的活动，若其知识库数据中包含【报名链接1】或【报名链接2】，必须在该活动信息中原样输出链接（URL 或链接标题），格式为「报名链接：xxx」。若该活动无报名链接字段则不输出该项`;
 
   try {
     // 使用现有百炼应用生成推荐（带知识库检索增强）
