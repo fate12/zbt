@@ -1,5 +1,7 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { ENV } from '../_core/env.js';
-import { retrieve } from './knowledge-base-service.js';
 import { streamBailianAppChat } from './bailian-app-service.js';
 import type { RetrieveDocument } from './knowledge-base-service.js';
 import { createSupabaseClient } from '../lib/supabase.js';
@@ -11,6 +13,40 @@ interface AnchorProfile {
   track_description: string;
   tags: string[];
   interests: string[];
+}
+
+// 活动数据字段（对应「结构化 活动信息.xlsx」的列）
+const ACTIVITY_FIELDS = [
+  '活动名称', '活动分类', '所属板块', '活动标签', '报名对象',
+  '报名要求描述', '详细活动要求', '报名链接1', '报名链接2', '备注说明',
+] as const;
+type Activity = Record<typeof ACTIVITY_FIELDS[number], string>;
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ACTIVITIES_PATH = path.resolve(__dirname, '../data/activities.json');
+
+/**
+ * 读取本地活动数据（由 scripts/gen-activities-json.js 从 Excel 生成）。
+ * 用本地数据做确定性板块匹配，不依赖向量检索（稀疏数据下召回不稳定）。
+ */
+function loadActivities(): Activity[] {
+  try {
+    return JSON.parse(fs.readFileSync(ACTIVITIES_PATH, 'utf8'));
+  } catch (e) {
+    console.error('[活动推荐] 读取 activities.json 失败:', e);
+    return [];
+  }
+}
+
+/** 把活动对象格式化为供 LLM 阅读的文本块 */
+function formatActivity(a: Activity, idx: number): string {
+  const lines = [`[${idx}] ${a['活动名称']}`];
+  for (const f of ACTIVITY_FIELDS) {
+    if (f === '活动名称') continue;
+    const v = a[f];
+    if (v) lines.push(`${f}: ${v}`);
+  }
+  return lines.join('\n');
 }
 
 /**
@@ -97,47 +133,41 @@ export async function* streamActivityRecommendation(
     return;
   }
 
-  // 2. 判定所属板块，并构建检索词（前置板块词，提升检索对同板块活动的命中率）
+  // 2. 判定所属板块，并按【所属板块】在本地活动数据中精确筛选
   const board = classifyBoard(profile);
-  const searchQuery = `${board} ${buildSearchQuery(profile)}`.trim();
 
   if (!buildSearchQuery(profile).trim()) {
     yield { type: 'content', content: '请先在后台管理系统中完善您的赛道描述、标签和兴趣偏好信息，才能获取个性化活动推荐。' };
     return;
   }
 
-  console.log(`[活动推荐] 所属板块: ${board} | 搜索词: ${searchQuery}`);
+  const allActivities = loadActivities();
+  const matched = allActivities.filter(a => (a['所属板块'] || '').trim() === board);
 
-  // 3. 知识库检索（使用活动推荐专用索引 12jffy38ih）
-  let documents: RetrieveDocument[] = [];
+  console.log(`[活动推荐] 所属板块: ${board} | 本地匹配活动数: ${matched.length}/${allActivities.length}`);
 
-  try {
-    const result = await retrieve({
-      indexId: ENV.bailianActivityIndexId,
-      query: searchQuery,
-      topK: 10,
-      rerank: true,
-    });
-    documents = result.documents;
-  } catch (e) {
-    console.error('[活动推荐] 知识库检索失败:', e);
+  if (matched.length === 0) {
+    yield { type: 'content', content: `未找到【${board}】板块的活动数据，请确认 activities.json 是否已更新。` };
+    return;
   }
 
-  // 4. 返回匹配的知识库文档
-  if (documents.length > 0) {
-    yield { type: 'sources', sources: documents };
-  }
+  // 3. 返回匹配的活动（供前端展示来源）
+  const sources: RetrieveDocument[] = matched.map((a, i) => ({
+    id: String(i + 1),
+    title: a['活动名称'],
+    content: formatActivity(a, i + 1),
+    score: 1,
+  }));
+  yield { type: 'sources', sources };
 
-  // 5. 构建上下文并调用百炼应用生成推荐
-  const knowledgeContext = documents
-    .map((doc, idx) => `[${idx + 1}] ${doc.title}\n${doc.content}`)
-    .join('\n\n---\n\n');
+  // 4. 构建上下文并调用百炼应用生成推荐
+  const knowledgeContext = matched.map((a, i) => formatActivity(a, i + 1)).join('\n\n---\n\n');
 
-  const prompt = `你是一个活动推荐助手。根据主播赛道判定其所属板块，只从知识库同板块的活动里推荐。
+  const prompt = `你是一个活动推荐助手。根据主播赛道判定其所属板块，只从该板块的活动里推荐。
 
 ## 匹配规则（必须严格遵守）
 1. 该主播所属板块已判定为【${board}】（依据其赛道介绍）
-2. 只能从知识库中【所属板块=${board}】的活动里挑选推荐，禁止推荐其他板块的活动
+2. 下方提供的活动数据均为【所属板块=${board}】，可从中挑选推荐
 3. 在同板块活动内，再按主播的具体标签/兴趣偏好，以及【报名对象】是否匹配主播类型（老主播/新主播/不限制）排序
 
 ## 主播信息
@@ -147,13 +177,13 @@ export async function* streamActivityRecommendation(
 - 标签：${profile.tags.length > 0 ? profile.tags.join('、') : '未设置'}
 - 兴趣偏好：${profile.interests.length > 0 ? profile.interests.join('、') : '未设置'}
 
-## 知识库匹配的活动数据
-${knowledgeContext || '（未匹配到相关活动数据）'}
+## 同板块活动数据
+${knowledgeContext}
 
 ## 输出要求
 1. 每个推荐活动以「活动名称」开头，给出推荐理由
 2. 多个活动按匹配度从高到低排列
-3. 报名链接：对每个推荐的活动，若其知识库数据中包含【报名链接1】或【报名链接2】，必须在该活动信息中原样输出链接（URL 或链接标题），格式为「报名链接：xxx」。若该活动无报名链接字段则不输出该项`;
+3. 报名链接：对每个推荐活动，若其数据中包含【报名链接1】或【报名链接2】，必须在该活动信息中原样输出链接（URL 或链接标题），格式为「报名链接：xxx」。若无报名链接字段则不输出该项`;
 
   try {
     // 使用现有百炼应用生成推荐（带知识库检索增强）
@@ -175,5 +205,5 @@ ${knowledgeContext || '（未匹配到相关活动数据）'}
     yield { type: 'error', content: `活动推荐服务暂时不可用：${e.message}` };
   }
 
-  console.log(`[活动推荐] 处理完成，匹配文档数: ${documents.length}`);
+  console.log(`[活动推荐] 处理完成，板块=${board}，匹配活动数=${matched.length}`);
 }
