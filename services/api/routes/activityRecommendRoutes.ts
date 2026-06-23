@@ -79,7 +79,7 @@ router.post('/', async (req: Request, res: Response) => {
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
 
-    const generator = streamActivityRecommendation(empId);
+    const generator = streamActivityRecommendation(empId, corpId);
 
     let accumulatedContent = '';
     let sources: any[] = [];

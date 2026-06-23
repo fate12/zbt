@@ -44,9 +44,22 @@ def cell_text(ws, r, c):
     return text
 
 
+def build_header_map(ws):
+    """读第一行表头，建立「字段名 -> 列号」映射，用于按名称定位列号不固定的可选列。"""
+    m = {}
+    for c in range(1, (ws.max_column or 0) + 1):
+        v = ws.cell(row=1, column=c).value
+        if v is not None and str(v).strip():
+            m[str(v).strip()] = c
+    return m
+
+
 def main():
     wb = openpyxl.load_workbook(SRC)
     ws = wb["数据表"]
+    header = build_header_map(ws)
+    # 「推荐频次」列号在 Excel 中不固定，按表头名动态查找；缺失则不输出该字段
+    freq_col = header.get("推荐频次")
     blocks = []
     for r in range(2, ws.max_row + 1):
         name = cell_text(ws, r, 1)
@@ -56,6 +69,9 @@ def main():
         for c, label in FIELDS:
             val = cell_text(ws, r, c)
             lines.append(f"{label}：{val}" if val else f"{label}：")
+        if freq_col is not None:
+            freq_val = cell_text(ws, r, freq_col)
+            lines.append(f"推荐频次：{freq_val}" if freq_val else "推荐频次：")
         blocks.append("\n".join(lines))
     out = SEP.join(blocks)
     with open(DST, "w", encoding="utf-8") as f:

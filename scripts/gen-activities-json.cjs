@@ -70,6 +70,9 @@ rows.slice(1).forEach((r, rowIdx) => {
       o[f] = text;
     }
   });
+  // 「推荐频次」为可选列：Excel 无该列时取空字符串，不阻塞生成（也不计入上方 FIELDS 校验）
+  const freqIdx = idx('推荐频次');
+  o['推荐频次'] = freqIdx >= 0 ? clean(r[freqIdx]) : '';
   list.push(o);
 });
 

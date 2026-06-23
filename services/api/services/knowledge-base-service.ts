@@ -16,6 +16,8 @@ export interface RetrieveDocument {
   score: number;
   documentId?: string;
   chunkId?: string;
+  // 原始元数据 Map（百炼切片自带，含 title/doc_id/file_path 等；自定义业务字段也可能在此）
+  metadata?: Record<string, any>;
 }
 
 export interface RetrieveResult {
@@ -69,6 +71,7 @@ export async function retrieve(params: RetrieveParams): Promise<RetrieveResult> 
     score: r.score ?? 0,
     documentId: r.document_id,
     chunkId: r.chunk_id,
+    metadata: r.metadata ?? r.meta ?? {},
   }));
 
   return {

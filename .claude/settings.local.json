@@ -99,7 +99,13 @@
       "Bash(lsof -nP -iTCP:5174 -sTCP:LISTEN)",
       "Bash(python3 -c ' *)",
       "Bash(python3 scripts/xlsx_to_kb_md.py)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(grep -rniE \"max|limit|限制|最大|次数|count|quota|推荐.{0,4}数\" services/api/services/activity-recommend-service.ts apps/user-web/src/pages/activity-recommend.tsx)",
+      "Bash(grep -rniE \"推荐.{0,6}\\(次|上限|限制|频率|配额\\)|每天|每日|每天|maxRecommend|recommendLimit|already.?recommend|已推荐|去重|dedup\" --include=\"*.ts\" --include=\"*.tsx\" services apps)",
+      "Bash(./services/api/node_modules/.bin/tsc --noEmit -p services/api/tsconfig.json)",
+      "Bash(echo \"---EXIT:$?---\")",
+      "mcp__web-search-prime__web_search_prime",
+      "mcp__web-reader__webReader"
     ]
   }
 }
