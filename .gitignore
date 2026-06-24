@@ -1,6 +1,7 @@
 node_modules/
 dist/
 build/
+dist_electron/
 .turbo/
 .pnpm-store/
 

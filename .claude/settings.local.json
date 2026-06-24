@@ -105,7 +105,19 @@
       "Bash(./services/api/node_modules/.bin/tsc --noEmit -p services/api/tsconfig.json)",
       "Bash(echo \"---EXIT:$?---\")",
       "mcp__web-search-prime__web_search_prime",
-      "mcp__web-reader__webReader"
+      "mcp__web-reader__webReader",
+      "Bash(VITE_API_BASE_URL=https://zhibotong-api-v2.onrender.com pnpm exec vite build)",
+      "Bash(ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/ pnpm install)",
+      "Bash(ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/ pnpm exec electron-builder --win --dir)",
+      "Bash(ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/ pnpm exec electron-builder --win --x64 --dir)",
+      "Bash(echo \"---exit:$?---\")",
+      "Bash(rm -rf ~/zbt-default)",
+      "Bash(rsync -a --exclude node_modules --exclude dist_electron --exclude 'apps/*/dist' . ~/zbt-default/)",
+      "Bash(cp apps/user-web/package.json ~/zbt-default/apps/user-web/package.json)",
+      "Bash(cp apps/user-web/electron/bump-version.cjs ~/zbt-default/apps/user-web/electron/bump-version.cjs)",
+      "Read(//Users/laityluo/zbt-default/apps/user-web/**)",
+      "Bash(BUMP=minor node electron/bump-version.cjs)",
+      "Bash(NO_BUMP=1 node electron/bump-version.cjs)"
     ]
   }
 }
