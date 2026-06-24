@@ -31,7 +31,7 @@ export default function LoginPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground mb-4">
             <MessageSquare className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold">直播通</h1>
+          <h1 className="text-2xl font-bold">主播通</h1>
           <p className="text-sm text-muted-foreground mt-1">AI 智能助手</p>
         </div>
 

@@ -351,7 +351,7 @@ export function ChatLayout() {
             {!messagesLoading && messages.length === 0 && !activeSessionId && (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                 <Bot className="h-12 w-12 mb-4 text-primary/50" />
-                <h2 className="text-lg font-medium mb-2">直播通 AI 助手</h2>
+                <h2 className="text-lg font-medium mb-2">主播通 AI 助手</h2>
                 <p className="text-sm">智能问答助手，为您解答直播相关问题</p>
                 <div className="grid grid-cols-2 gap-3 mt-8 w-full max-w-md">
                   {['直播流程规范是什么？', '主播话术有哪些技巧？', '直播选品标准是什么？', '如何提高直播间转化率？'].map(

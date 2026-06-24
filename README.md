@@ -1,11 +1,11 @@
-# 直播通 Workspace
+# 主播通 Workspace
 
 当前仓库已整理为一个 `pnpm workspace`，按职责拆分为三个应用：
 
 ```text
 apps/
   admin-web/   # 主播管理后台
-  user-web/    # 直播通前端
+  user-web/    # 主播通前端
 services/
   api/         # Node/Express API
 docs/

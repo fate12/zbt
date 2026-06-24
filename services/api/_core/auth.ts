@@ -21,7 +21,7 @@ export async function need_login(req: any, res: any, next: any) {
     // 尝试验证 token 并挂载用户上下文
     if (token) {
       try {
-        // 先尝试自定义 token（直播通APP登录）
+        // 先尝试自定义 token（主播通APP登录）
         const customPayload = verifyCustomToken(token);
         if (customPayload) {
           req.user = new UserContext({
