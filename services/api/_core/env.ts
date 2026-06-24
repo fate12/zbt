@@ -20,6 +20,12 @@ export const ENV = {
     bailianAppId: process.env.BAILIAN_APP_ID ?? '',                 // 主播通主应用
     bailianDefaultIndexId: process.env.BAILIAN_DEFAULT_INDEX_ID ?? '', // 默认知识索引
     bailianActivityIndexId: process.env.BAILIAN_ACTIVITY_INDEX_ID ?? '',// 活动推荐知识索引
+    // 知识库「命中」最低相关性分数（rerank 分数，0~1）。低于此分视为未命中 → 走通用模型兜底。
+    // 用真实语料微调；设为 0 表示「有返回即命中」。非法值兜底为 0.35。
+    bailianKbHitMinScore: (() => {
+        const n = Number(process.env.BAILIAN_KB_HIT_MIN_SCORE ?? '0.35');
+        return Number.isFinite(n) ? n : 0.35;
+    })(),
 
     // ─── ④ 腾讯文档（按需，未用到可留空）────────────────────────────────
     tencentDocsClientId: process.env.TENCENT_DOCS_CLIENT_ID ?? '',

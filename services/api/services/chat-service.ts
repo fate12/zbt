@@ -1,6 +1,7 @@
 import { ENV } from '../_core/env.js';
 import { streamBailianAppChat } from './bailian-app-service.js';
-import { retrieve, retrieveAsContext } from './knowledge-base-service.js';
+import { retrieve } from './knowledge-base-service.js';
+import { streamGeneralChat } from './general-model-service.js';
 import { createSupabaseClient } from '../lib/supabase.js';
 
 const supabase = createSupabaseClient(
@@ -140,6 +141,10 @@ export async function saveMessage(sessionId: string, role: string, content: stri
   return data;
 }
 
+// 通用模型兜底时的人设（无知识库 / 未命中知识库时使用）
+const GENERAL_ASSISTANT_PROMPT = `你是「主播通」的 AI 助手，主要服务直播主播，解答直播相关的常见问题（开播准备、直播间互动、流量增长、直播带货、合规注意事项等）。
+请用简洁、可执行的中文回答；若问题超出直播范畴或你没有把握，请如实说明，不要编造。`;
+
 // 流式聊天
 export async function* streamChat(
   sessionId: string,
@@ -164,12 +169,41 @@ export async function* streamChat(
   // 当前消息
   messages.push({ role: 'user', content: content });
 
-  // 3. 使用百炼应用（内置知识库检索增强）
+  // 3. 判定是否命中知识库：无索引 / 未命中 / 检索失败 → 走通用模型兜底
+  const targetIndexId = indexId || ENV.bailianDefaultIndexId;
+  let useKb = false;
+
+  if (targetIndexId) {
+    try {
+      const result = await retrieve({
+        indexId: targetIndexId,
+        query: content,
+        topK: 5,
+        rerank: true,
+      });
+      const topScore = result.documents[0]?.score ?? 0;
+      useKb = result.documents.length > 0 && topScore >= ENV.bailianKbHitMinScore;
+      console.log(
+        `[聊天] 知识库检索：命中 ${result.documents.length} 条，top score=${topScore.toFixed(4)}，阈值=${ENV.bailianKbHitMinScore} → 走${useKb ? '知识库(百炼App)' : '通用模型'}`
+      );
+    } catch (e: any) {
+      console.error('[聊天] 知识库检索失败，降级走通用模型:', e?.message);
+      useKb = false;
+    }
+  } else {
+    console.log('[聊天] 未配置知识库索引，走通用模型兜底');
+  }
+
+  // 4. 调用 LLM：命中知识库 → 百炼 App（带来源）；否则 → 通用模型兜底
   let fullContent = '';
   let sources: any[] = [];
 
   try {
-    for await (const chunk of streamBailianAppChat(messages)) {
+    const gen: AsyncGenerator<{ type: string; content?: string; sources?: any }> = useKb
+      ? streamBailianAppChat(messages)
+      : streamGeneralChat(messages, { systemPrompt: GENERAL_ASSISTANT_PROMPT });
+
+    for await (const chunk of gen) {
       if (chunk.type === 'content' && chunk.content) {
         fullContent += chunk.content;
         yield { type: 'content', content: chunk.content };
@@ -184,12 +218,12 @@ export async function* streamChat(
     return;
   }
 
-  // 4. 保存助手回复
+  // 5. 保存助手回复
   if (fullContent) {
     await saveMessage(sessionId, 'assistant', fullContent, sources.length > 0 ? sources : undefined);
   }
 
-  // 5. 更新会话时间
+  // 6. 更新会话时间
   await supabase
     .from('chat_sessions')
     .update({ updated_at: new Date().toISOString() })
