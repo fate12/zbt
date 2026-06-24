@@ -41,7 +41,10 @@ function createWindow() {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
-    mainWindow.loadURL('app://./index.html');
+    // 入口用根路径而非 index.html：BrowserRouter 以 location.pathname 做路由匹配，
+    // 若写成 /index.html 会命中 AppRoutes 的兜底 * 路由 → 显示 404 页。
+    // 协议处理器对 '/' 已会回退返回 dist/index.html，故页面正常加载且路由为 '/'。
+    mainWindow.loadURL('app://./');
   }
 
   // 调试：ZBT_DEBUG=1 时把渲染层日志/加载失败打到主进程 stdout，便于排查白屏等问题
