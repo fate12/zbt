@@ -46,7 +46,7 @@ function formatTime(iso: string): string {
 // 去除 markdown 标记，生成纯文本预览
 function plainPreview(markdown: string, len = 40): string {
   const text = (markdown || '')
-    .replace(/[#*`>_~\-]/g, '')
+    .replace(/[#*`>_~-]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
   return text.length > len ? text.slice(0, len) + '…' : text;

@@ -1,7 +1,8 @@
 import { getToken } from './auth';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL
-  || (import.meta.env.PROD ? 'https://zhibotong-api-v2.onrender.com' : '');
+// 生产环境必须由 CI 注入 VITE_API_BASE_URL(指向 API 域名,如 https://api.xxx.com);
+// 为空时走同源(开发依赖 Vite 代理 / 生产依赖同域反代)。
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 export function resolveApiUrl(url: string): string {
   if (!API_BASE || /^https?:\/\//i.test(url)) return url;

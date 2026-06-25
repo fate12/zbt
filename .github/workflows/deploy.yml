@@ -1,0 +1,58 @@
+# 主播通 部署流水线（ECS 全托管）
+#
+# user-web、admin-web、API 全部跑在一台阿里云 ECS 上：
+#   - user-web：Nginx 直接托管静态文件
+#   - admin-web + API：Node(9000)，admin-web 含 token 注入，由 Nginx 反代
+#
+# 触发：
+#   - push 到 main：SSH 触发 ECS 脚本（git pull + build 全部 + pm2 reload）
+#   - PR：只跑 lint + build 校验，不部署
+#
+# 密钥：只需 ECS 的 SSH 凭证（3 个 Secret）；业务密钥放 ECS 的 .env，不进仓库。
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────
+  # PR：只校验，不部署
+  # ──────────────────────────────────────────────────────────────────────
+  ci-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.4.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm lint
+      - run: pnpm build
+
+  # ──────────────────────────────────────────────────────────────────────
+  # 部署：SSH 触发 ECS 上的 deploy/deploy-api.sh
+  # ──────────────────────────────────────────────────────────────────────
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 配置 SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ECS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.ECS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 触发 ECS 部署（git pull + build 全部 + pm2 reload）
+        run: |
+          ssh ${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }} \
+            "cd /opt/zhibotong && bash deploy/deploy-api.sh"
