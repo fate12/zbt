@@ -22,8 +22,9 @@ pnpm build:api
 pnpm build:admin
 pnpm build:user
 
-echo "==> 重启 api（pm2 零停机）"
-pm2 reload deploy/ecosystem.config.cjs --update-env
+echo "==> 重启 api（pm2 零停机；必须 cd 到 services/api，否则 dotenv 读不到 .env）"
+cd /opt/zhibotong/services/api
+pm2 reload zhibotong-api --update-env
 
 echo "==> 部署完成"
 pm2 status
