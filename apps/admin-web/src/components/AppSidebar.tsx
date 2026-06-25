@@ -35,9 +35,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-3 py-3 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <img src={resolveUrl("/app-icon.svg", true)} alt="" className="size-5" />
-          </div>
+          <img src={resolveUrl("/app-icon.svg", true)} alt="" className="h-8 w-auto" />
           <span className="text-base font-semibold">主播管理后台</span>
         </div>
       </SidebarHeader>

@@ -17,9 +17,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen w-full">
       {/* 侧边导航 */}
       <nav className="w-16 flex flex-col items-center py-4 border-r bg-muted/30">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground mb-5 shadow-sm">
-          <MessageSquare className="h-5 w-5" />
-        </div>
+        <img src="/app-icon.svg" alt="主播通" className="h-11 w-11 mb-5" />
 
         <Link
           to="/chat"
