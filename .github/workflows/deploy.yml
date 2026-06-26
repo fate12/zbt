@@ -53,6 +53,9 @@ jobs:
           ssh-keyscan -H ${{ secrets.ECS_HOST }} >> ~/.ssh/known_hosts
 
       - name: 触发 ECS 部署（git pull + build 全部 + pm2 reload）
+        timeout-minutes: 15
         run: |
-          ssh ${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }} \
+          # ServerAliveInterval 防止 build 几分钟期间 SSH 空闲被断开（曾因此偶发 failure）
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            ${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }} \
             "cd /opt/zhibotong && bash deploy/deploy-api.sh"
