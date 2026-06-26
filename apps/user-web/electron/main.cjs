@@ -1,12 +1,12 @@
 // Electron 主进程 —— 主播通桌面端壳
-// 仅作为 user-web 前端的容器，所有 API 走远程已部署后端（https://zhibotong-api-v2.onrender.com）
+// 仅作为 user-web 前端的容器，所有 API 走远程已部署后端（http://120.26.97.178）
 const { app, BrowserWindow, protocol, session, net } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const url = require('node:url');
 
 // 远程 API 主机（用于按需修正 CORS 响应头，避免改服务端）
-const API_HOST = 'zhibotong-api-v2.onrender.com';
+const API_HOST = '120.26.97.178';
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
 
 // 注册自定义协议 app://，使打包后 BrowserRouter 的深链/刷新不致 404
@@ -34,6 +34,9 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      // API 暂走 ECS 的 http://120.26.97.178（未配 HTTPS），需放行 insecure content，
+      // 否则 secure 的 app:// 页面 fetch http 会被混合内容策略拦截。配域名+HTTPS 后可移除。
+      webSecurity: false,
     },
   });
 

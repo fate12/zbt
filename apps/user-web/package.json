@@ -1,7 +1,7 @@
 {
   "name": "@zhibotong/user-web",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -9,9 +9,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron:dev": "concurrently -k \"cross-env VITE_API_BASE_URL=https://zhibotong-api-v2.onrender.com vite\" \"wait-on tcp:5174 && cross-env VITE_DEV_SERVER_URL=http://localhost:5174 electron .\"",
+    "electron:dev": "concurrently -k \"cross-env VITE_API_BASE_URL=http://120.26.97.178 vite\" \"wait-on tcp:5174 && cross-env VITE_DEV_SERVER_URL=http://localhost:5174 electron .\"",
     "version:bump": "node electron/bump-version.cjs",
-    "electron:build": "node electron/bump-version.cjs && cross-env VITE_API_BASE_URL=https://zhibotong-api-v2.onrender.com vite build && electron-builder --win --x64"
+    "electron:build": "node electron/bump-version.cjs && cross-env VITE_API_BASE_URL=http://120.26.97.178 vite build && electron-builder --win --x64"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
