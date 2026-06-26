@@ -97,6 +97,15 @@ export function ChatLayout() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // 会话写入：后端新建时会清理旧空会话并返回 removedEmptyIds；据此移除已删项，再插入新会话（已存在则仅激活）
+  const upsertSession = (session: Session, removedEmptyIds: string[] = []) => {
+    setActiveSessionId(session.id);
+    setSessions((prev) => {
+      const filtered = removedEmptyIds.length ? prev.filter((s) => !removedEmptyIds.includes(s.id)) : prev;
+      return filtered.some((s) => s.id === session.id) ? filtered : [session, ...filtered];
+    });
+  };
+
   const handleNewSession = async () => {
     try {
       const res = await authFetch('/api/chat/sessions', {
@@ -106,8 +115,7 @@ export function ChatLayout() {
       });
       if (res.ok) {
         const data = await res.json();
-        setSessions((prev) => [data.data, ...prev]);
-        setActiveSessionId(data.data.id);
+        upsertSession(data.data, data.removedEmptyIds || []);
       }
     } catch (e) {
       console.error('创建会话失败', e);
@@ -115,17 +123,19 @@ export function ChatLayout() {
   };
 
   const handleDeleteSession = async (sessionId: string) => {
+    const prev = sessions;
+    // 乐观删除：立即从 UI 移除
+    setSessions(prev.filter((s) => s.id !== sessionId));
+    if (activeSessionId === sessionId) {
+      const next = prev.filter((s) => s.id !== sessionId);
+      setActiveSessionId(next.length > 0 ? next[0].id : null);
+      setMessages([]);
+    }
     try {
-      const res = await authFetch(`/api/chat/sessions/${sessionId}`, { method: 'DELETE' });
-      if (res.ok) {
-        setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-        if (activeSessionId === sessionId) {
-          setActiveSessionId(null);
-          setMessages([]);
-        }
-      }
-    } catch (e) {
-      console.error('删除会话失败', e);
+      await apiFetch(`/api/chat/sessions/${sessionId}`, { method: 'DELETE' });
+    } catch {
+      // 失败时回滚
+      setSessions(prev);
     }
   };
 
@@ -144,9 +154,8 @@ export function ChatLayout() {
         });
         if (res.ok) {
           const data = await res.json();
-          setSessions((prev) => [data.data, ...prev]);
           sessionId = data.data.id;
-          setActiveSessionId(sessionId);
+          upsertSession(data.data, data.removedEmptyIds || []);
         }
       } catch (e) {
         console.error('创建会话失败', e);
@@ -299,7 +308,10 @@ export function ChatLayout() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                      className={cn(
+                        'h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100',
+                        activeSessionId === session.id && 'text-primary-foreground hover:bg-primary-foreground/20'
+                      )}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <MoreHorizontal className="h-3 w-3" />

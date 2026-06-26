@@ -100,7 +100,35 @@ export async function listSessions(empId: string): Promise<ChatSession[]> {
   return data || [];
 }
 
-export async function createSession(empId: string, corpId: string, title: string): Promise<ChatSession> {
+export async function createSession(
+  empId: string,
+  corpId: string,
+  title: string
+): Promise<{ session: ChatSession; removedEmptyIds: string[] }> {
+  const removedEmptyIds: string[] = [];
+
+  // 清理：删除该用户所有「没有任何消息」的空会话，避免空对话一直占位（随后新建一个全新的替代）
+  const { data: userSessions } = await supabase
+    .from('chat_sessions')
+    .select('id')
+    .eq('emp_id', empId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (userSessions && userSessions.length > 0) {
+    const { data: withMsg } = await supabase
+      .from('chat_messages')
+      .select('session_id')
+      .in('session_id', userSessions.map((s) => s.id));
+    const busy = new Set((withMsg || []).map((m) => m.session_id));
+    const emptyIds = userSessions.filter((s) => !busy.has(s.id)).map((s) => s.id);
+    if (emptyIds.length > 0) {
+      // chat_messages 对 chat_sessions 有 ON DELETE CASCADE，删会话即联动清消息
+      const { error: delErr } = await supabase.from('chat_sessions').delete().in('id', emptyIds);
+      if (!delErr) removedEmptyIds.push(...emptyIds);
+    }
+  }
+
   const { data, error } = await supabase
     .from('chat_sessions')
     .insert({ emp_id: empId, corp_id: corpId, title, updated_at: new Date().toISOString() })
@@ -108,7 +136,7 @@ export async function createSession(empId: string, corpId: string, title: string
     .single();
 
   if (error) throw error;
-  return data;
+  return { session: data, removedEmptyIds };
 }
 
 export async function deleteSession(sessionId: string, empId: string): Promise<void> {

@@ -3,6 +3,12 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Sparkles,
   FileText,
   Loader2,
@@ -11,6 +17,7 @@ import {
   Tags,
   History,
   Trash2,
+  MoreHorizontal,
   PanelLeftClose,
   PanelLeft,
 } from 'lucide-react';
@@ -213,7 +220,7 @@ export default function ActivityRecommendPage() {
                 <div
                   key={item.id}
                   className={cn(
-                    'group flex items-start gap-2 rounded-xl px-3 py-2.5 cursor-pointer transition-all',
+                    'group flex items-center gap-3 rounded-xl px-3 py-2.5 cursor-pointer transition-all',
                     selectedId === item.id
                       ? 'bg-primary/90 text-primary-foreground shadow-sm'
                       : 'hover:bg-accent/80'
@@ -233,20 +240,33 @@ export default function ActivityRecommendPage() {
                       {formatTime(item.created_at)}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      'h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100',
-                      selectedId === item.id && 'text-primary-foreground hover:bg-primary-foreground/20'
-                    )}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(item.id);
-                    }}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                          'h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100',
+                          selectedId === item.id && 'text-primary-foreground hover:bg-primary-foreground/20'
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreHorizontal className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        删除
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ))
             )}

@@ -27,8 +27,8 @@ router.post('/sessions', async (req: Request, res: Response) => {
     const empId = (req as any).user?.emp_id || 'visitor';
     const corpId = (req as any).user?.corp_id || '';
     const { title } = req.body;
-    const session = await createSession(empId, corpId, title || '新对话');
-    res.json({ success: true, data: session });
+    const { session, removedEmptyIds } = await createSession(empId, corpId, title || '新对话');
+    res.json({ success: true, data: session, removedEmptyIds });
   } catch (e: any) {
     console.error('创建会话失败:', e);
     res.status(500).json({ success: false, error: e.message });
