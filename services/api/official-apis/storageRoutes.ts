@@ -64,7 +64,7 @@ router.post('/upload', upload.single('file'), async (req: any, res: any) => {
     const timestamp = Date.now();
     const filePath = `${folder}/${timestamp}_${sanitizedName}`;
 
-    const service = new StorageService(req.supabase);
+    const service = new StorageService();
 
     const result = await service.upload(
       filePath,
@@ -102,7 +102,7 @@ router.post('/delete', async (req: any, res: any) => {
       return res.status(400).json({ success: false, error: 'filePaths must be a non-empty array' });
     }
 
-    const service = new StorageService(req.supabase);
+    const service = new StorageService();
     const result = await service.delete(filePaths, bucketSuffix);
 
     res.json({ success: true, data: result });

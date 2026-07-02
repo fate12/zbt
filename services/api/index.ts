@@ -8,6 +8,8 @@ import { fileURLToPath } from 'url';
 import { need_login } from './_core/auth.js';
 import {createTokenInjectionMiddleware} from "./_core/tokenInjection.js";
 import storageRoutes from './official-apis/storageRoutes.js';
+import { closePool } from './lib/db.js';
+import { runMigrations } from './lib/migrations.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,7 +59,6 @@ import importRoutes from './routes/importRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import activityRecommendRoutes from './routes/activityRecommendRoutes.js';
-import { ensureChatTables, ensureActivityRecommendTable } from './services/chat-service.js';
 
 app.use('/api/anchors', anchorRoutes);
 app.use('/api/import', importRoutes);
@@ -74,10 +75,22 @@ app.get('*', (req, res) => {
 const PORT = process.env.PORT || 9000;
 
 app.listen(PORT, async () => {
-  await ensureChatTables();
-  await ensureActivityRecommendTable();
+  await runMigrations();
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
+// 优雅关闭：退出前释放 PG 连接池，避免请求/连接悬挂
+async function shutdown(signal: string) {
+  console.log(`[shutdown] received ${signal}, closing pg pool...`);
+  try {
+    await closePool();
+  } catch (e) {
+    console.error('[shutdown] pool close error:', e);
+  }
+  process.exit(0);
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 function resolveAdminDistRoot() {
   const candidates = [

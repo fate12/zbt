@@ -1,11 +1,4 @@
-import { createSupabaseClient } from '../lib/supabase.js';
-import { ENV } from '../_core/env.js';
-
-// 与 chat-service.ts 一致：优先 service_role key，便于绕过 RLS 写入计数
-const supabase = createSupabaseClient(
-  ENV.supabaseUrl,
-  ENV.supabaseServiceRoleKey || ENV.supabaseAnonKey
-);
+import { query } from '../lib/db.js';
 
 /** 候选活动（带规范化主键、原名称、推荐频次上限；frequency=Infinity 表示无限制） */
 export interface ActivityWithFreq {
@@ -36,17 +29,18 @@ export async function getRecommendCounts(
 ): Promise<Map<string, number>> {
   const map = new Map<string, number>();
   if (activityKeys.length === 0) return map;
-  const { data, error } = await supabase
-    .from('activity_recommend_counts')
-    .select('activity_key, recommend_count')
-    .eq('emp_id', empId)
-    .in('activity_key', activityKeys);
-  if (error) {
-    console.error('[activity-count] 查询计数失败:', error);
-    return map;
-  }
-  for (const row of (data ?? []) as CountRow[]) {
-    map.set(row.activity_key, row.recommend_count ?? 0);
+  try {
+    const rows = await query<CountRow>(
+      `SELECT activity_key, recommend_count
+       FROM activity_recommend_counts
+       WHERE emp_id = $1 AND activity_key = ANY($2::text[])`,
+      [empId, activityKeys],
+    );
+    for (const row of rows) {
+      map.set(row.activity_key, row.recommend_count ?? 0);
+    }
+  } catch (e: any) {
+    console.error('[activity-count] 查询计数失败:', e?.message);
   }
   return map;
 }
@@ -82,15 +76,13 @@ export async function incrementRecommendCounts(
   items: Array<{ activityKey: string; activityName: string }>
 ): Promise<void> {
   for (const item of items) {
-    const { error } = await supabase.rpc('increment_activity_recommend_count', {
-      p_emp_id: empId,
-      p_corp_id: corpId,
-      p_activity_key: item.activityKey,
-      p_activity_name: item.activityName,
-      p_increment: 1,
-    });
-    if (error) {
-      console.error(`[activity-count] 累加失败 activity=${item.activityName}:`, error);
+    try {
+      await query(
+        `SELECT increment_activity_recommend_count($1, $2, $3, $4, $5)`,
+        [empId, corpId, item.activityKey, item.activityName, 1],
+      );
+    } catch (e: any) {
+      console.error(`[activity-count] 累加失败 activity=${item.activityName}:`, e?.message);
     }
   }
 }

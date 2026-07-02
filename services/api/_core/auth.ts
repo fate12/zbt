@@ -1,14 +1,12 @@
-import { SupabaseClient } from '@supabase/supabase-js';
 import { UserContext } from '../lib/user-context.js';
 import { ENV } from './env.js';
 import { verifyCustomToken } from '../services/auth-service.js';
-import { createSupabaseClient } from '../lib/supabase.js';
 
 
 /**
  * Authentication middleware for all /api routes.
- * Extracts Bearer token from Authorization header, validates it via Supabase,
- * and mounts req.user (UserContext) and req.supabase on the request object.
+ * Extracts Bearer token from Authorization header / access_token cookie,
+ * validates it via our custom HMAC JWT, and mounts req.user (UserContext).
  *
  * 支持免登白名单：命中白名单的路径直接放行（有 token 时仍尝试挂载用户上下文）。
  */
@@ -18,10 +16,9 @@ export async function need_login(req: any, res: any, next: any) {
     const isPublic = isPublicRoute(req.method, req.path || '');
     const token = extractToken(req);
 
-    // 尝试验证 token 并挂载用户上下文
+    // 尝试验证 token 并挂载用户上下文（仅自定义 token，已与 Supabase Auth 解耦）
     if (token) {
       try {
-        // 先尝试自定义 token（主播通APP登录）
         const customPayload = verifyCustomToken(token);
         if (customPayload) {
           req.user = new UserContext({
@@ -31,26 +28,14 @@ export async function need_login(req: any, res: any, next: any) {
             avatar: '',
             app_id: ENV.appId,
           });
-          if (!req.supabase) {
-            req.supabase = createSupabaseClient(ENV.supabaseUrl!, ENV.supabaseAnonKey!);
-          }
-        } else {
-          // 再尝试 Supabase token
-          const result = await verifyToken(token);
-          if (result) mountUserContext(req, result.user, result.supabase);
         }
       } catch {
         // token 解析失败：免登接口忽略，需登录接口下方会再次拦截
       }
     }
 
-    // 保证所有请求都有 req.supabase（匿名用户用 anon key 创建客户端，受 RLS 控制）
-    if (!req.supabase) {
-      req.supabase = createSupabaseClient(ENV.supabaseUrl!, ENV.supabaseAnonKey!);
-    }
-
     // 免登接口且没有登录用户时，构建访客身份
-    // 参考 app_oauth.py 访客逻辑：用确定性标识 free_visitor_{app_id} 构造共享匡名身份
+    // 用确定性标识 free_visitor_{app_id} 构造共享匿名身份
     if (isPublic && !req.user) {
       req.user = new UserContext({
         corp_id: 'anonymous',
@@ -66,7 +51,7 @@ export async function need_login(req: any, res: any, next: any) {
 
     // 需登录接口：必须有有效的用户上下文
     if (!req.user) {
-      const reason = !token ? 'No token found' :  'Token verification failed';
+      const reason = !token ? 'No token found' : 'Token verification failed';
       console.warn(`[NeedLogin] ${reason}, path=${requestPath}`);
       res.status(401).json({
         code: 'UNAUTHORIZED',
@@ -162,34 +147,4 @@ function extractToken(req: any): string | null {
   const headerToken = req.headers.authorization?.split(' ')[1];
   const cookieToken = req.cookies?.access_token;
   return headerToken || cookieToken || null;
-}
-
-/**
- * 用 token 创建 Supabase 客户端并验证用户。
- * 返回 { user, supabase } 或 null（验证失败时）。
- */
-async function verifyToken(token: string): Promise<{ user: any; supabase: SupabaseClient } | null> {
-  const supabase = createSupabaseClient(
-    ENV.supabaseUrl!,
-    ENV.supabaseAnonKey!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  return { user, supabase };
-}
-
-/**
- * 将 Supabase 用户信息挂载到 req 上（req.user + req.supabase）
- */
-function mountUserContext(req: any, user: any, supabase: SupabaseClient): void {
-  req.user = new UserContext({
-    corp_id: user.user_metadata?.corp_id,
-    corp_name: user.user_metadata?.corp_name,
-    emp_id: user.user_metadata?.emp_id,
-    name: user.user_metadata?.nick,
-    avatar: user.user_metadata?.avatar,
-    app_id: ENV.appId,
-  });
-  req.supabase = supabase;
 }

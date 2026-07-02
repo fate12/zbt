@@ -3,11 +3,20 @@
  * 按三方平台分组；换配置时只关注对应分组，完整说明见 services/api/.env.example。
  */
 export const ENV = {
-    // ─── ② Supabase（数据库 + 存储，影响全部数据读写/上传/鉴权）──────────
-    supabaseUrl: process.env.SUPABASE_URL ?? '',
-    supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? '',
-    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
-    bucketName: process.env.BUCKET_NAME ?? '',
+    // ─── ② 阿里云 RDS PostgreSQL（数据库，影响全部数据读写/鉴权）──────────
+    // 单一连接串，形如 postgresql://user:pass@rm-xxx.pg.rds.aliyuncs.com:5432/zhibotong?sslmode=require
+    databaseUrl: process.env.DATABASE_URL ?? '',
+
+    // ─── ② 鉴权密钥（自定义 HMAC-SHA256 JWT 签名密钥，≥32 字符随机串）─────
+    jwtSecret: process.env.JWT_SECRET ?? '',
+
+    // ─── ② 阿里云 OSS（对象存储，影响文件/图片上传）──────────────────────
+    ossRegion: process.env.OSS_REGION ?? '',
+    ossAccessKeyId: process.env.OSS_ACCESS_KEY_ID ?? '',
+    ossAccessKeySecret: process.env.OSS_ACCESS_KEY_SECRET ?? '',
+    ossBucket: process.env.OSS_BUCKET ?? '',
+    ossEndpoint: process.env.OSS_ENDPOINT ?? '',         // 形如 https://oss-cn-hangzhou.aliyuncs.com
+    ossCdnDomain: process.env.OSS_CDN_DOMAIN ?? '',      // 可选：自定义域名 / CDN，留空则用默认外网域名
 
     // ─── 应用标识（APP_ID 仅用于访客身份 free_visitor_{APP_ID}，非企业微信 API 调用）
     appId: process.env.APP_ID ?? '',

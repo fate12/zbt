@@ -1,8 +1,8 @@
 import crypto from 'crypto';
 import { ENV } from '../_core/env.js';
-import { createSupabaseClient } from '../lib/supabase.js';
+import { query } from '../lib/db.js';
 
-const TOKEN_SECRET = ENV.supabaseAnonKey; // 用 anon key 作为签名密钥
+const TOKEN_SECRET = ENV.jwtSecret; // 自定义 JWT 签名密钥（与 Supabase 解耦）
 const TOKEN_EXPIRY = '7d';
 
 interface TokenPayload {
@@ -73,19 +73,28 @@ export function verifyCustomToken(token: string): TokenPayload | null {
   }
 }
 
+interface AccountRow {
+  id: string | number;
+  account_name: string;
+  account_password: string;
+  status: string;
+  track_description: string;
+  tags: string;
+  interests: string;
+}
+
 // 校验账号密码
 export async function validateCredentials(accountName: string, accountPassword: string) {
-  const supabase = createSupabaseClient(ENV.supabaseUrl, ENV.supabaseAnonKey);
+  const rows = await query<AccountRow>(
+    `SELECT id, account_name, account_password, status, track_description, tags, interests
+     FROM anchor_accounts
+     WHERE account_name = $1 AND is_deleted = 'n'
+     LIMIT 1`,
+    [accountName],
+  );
 
-  const { data, error } = await supabase
-    .from('anchor_accounts')
-    .select('id, account_name, account_password, status, track_description, tags, interests')
-    .eq('account_name', accountName)
-    .eq('is_deleted', 'n')
-    .limit(1);
-
-  if (error || !data || data.length === 0) return null;
-  const account = data[0];
+  if (rows.length === 0) return null;
+  const account = rows[0];
   if (account.account_password !== accountPassword) return null;
   if (account.status === 'disabled') return null;
 
@@ -100,17 +109,16 @@ export async function validateCredentials(accountName: string, accountPassword: 
 }
 
 export async function getAnchorUserProfile(empId: string): Promise<AnchorUserProfile | null> {
-  const supabase = createSupabaseClient(ENV.supabaseUrl, ENV.supabaseAnonKey);
+  const rows = await query<AccountRow>(
+    `SELECT id, account_name, track_description, tags, interests
+     FROM anchor_accounts
+     WHERE id = $1 AND is_deleted = 'n'
+     LIMIT 1`,
+    [empId],
+  );
 
-  const { data, error } = await supabase
-    .from('anchor_accounts')
-    .select('id, account_name, track_description, tags, interests')
-    .eq('id', empId)
-    .eq('is_deleted', 'n')
-    .limit(1);
-
-  if (error || !data || data.length === 0) return null;
-  const account = data[0];
+  if (rows.length === 0) return null;
+  const account = rows[0];
 
   return {
     emp_id: String(account.id),

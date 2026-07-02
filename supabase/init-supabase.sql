@@ -1,4 +1,11 @@
 -- ════════════════════════════════════════════════════════════════════════
+--  ⚠️ 已废弃（DEPRECATED）：数据层已从 Supabase 迁至阿里云 RDS PostgreSQL +
+--     OSS。新部署请改用 deploy/db/init.sql（仅运行时表，无 pgvector / RLS）。
+--     本文件仅作历史参考保留，不再随服务运行。
+-- ════════════════════════════════════════════════════════════════════════
+
+
+-- ════════════════════════════════════════════════════════════════════════
 --  主播通 · Supabase 项目初始化脚本（全新空库）
 --  ────────────────────────────────────────────────────────────────────────
 --  用途：在【客户的新 Supabase 项目】里把本文件完整粘贴进 SQL Editor 一次执行，
@@ -348,10 +355,40 @@ CREATE TABLE IF NOT EXISTS public.anchor_accounts (
   last_login_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
-  is_deleted CHAR(1) DEFAULT 'n'
+  is_deleted CHAR(1) DEFAULT 'n',
+  -- 展示名（account_name 存数字 uid，昵称单独存以便展示）
+  display_name VARCHAR(256) DEFAULT '',
+  -- 既有「幽灵列」正式落 DDL（此前代码在用但未定义）
+  track_description TEXT DEFAULT '',
+  tags TEXT DEFAULT '[]',
+  interests TEXT DEFAULT '[]',
+  creator_emp_id VARCHAR(128) DEFAULT '',
+  -- 公会后台主播字段（数值/比例列含 '-' 占位，统一 TEXT 原样存储）
+  operation_agent VARCHAR(128) DEFAULT '',       -- 运营经纪人
+  recruit_agent VARCHAR(128) DEFAULT '',         -- 招募经纪人
+  room_id VARCHAR(64) DEFAULT '',                -- 房间号
+  anchor_type VARCHAR(64) DEFAULT '',            -- 主播类型
+  topstar_level VARCHAR(64) DEFAULT '',          -- TOPSTAR等级
+  cooperation_period TEXT DEFAULT '',            -- 合作时间
+  sign_time TEXT DEFAULT '',                     -- 签约时间
+  sign_status VARCHAR(64) DEFAULT '',            -- 签约状态
+  is_star_anchor VARCHAR(16) DEFAULT '',         -- 是否繁星主播
+  star_level VARCHAR(32) DEFAULT '',             -- 繁星主播星级
+  star_task TEXT DEFAULT '',                     -- 星级任务
+  fans_count TEXT DEFAULT '',                    -- 粉丝数
+  revenue_30d TEXT DEFAULT '',                   -- 近30天流水
+  expire_in_days TEXT DEFAULT '',                -- 距离到期时间
+  gift_withdraw_rate TEXT DEFAULT '',            -- 主播礼物收益自提比例
+  sign_bonus_rate TEXT DEFAULT '',               -- 主播签约金自提比例
+  ops_reward_rate TEXT DEFAULT '',               -- 主播运营奖惩进自提比例
+  renew_status VARCHAR(32) DEFAULT '',           -- 续约状态
+  auto_renew VARCHAR(16) DEFAULT '',             -- 自动续约按钮
+  no_broadcast_days TEXT DEFAULT '',             -- 未开播天数
+  import_source VARCHAR(256) DEFAULT ''          -- 导入溯源
 );
 CREATE INDEX IF NOT EXISTS idx_anchor_accounts_account_name ON public.anchor_accounts(account_name);
 CREATE INDEX IF NOT EXISTS idx_anchor_accounts_status ON public.anchor_accounts(status);
+-- 注：现有库升级请改用 supabase/migration/015_anchor_accounts_guild_columns.sql（幂等 ALTER）。
 
 INSERT INTO public.anchor_accounts (account_name, account_password, status, role)
 VALUES ('admin', 'admin123', 'active', 'admin')

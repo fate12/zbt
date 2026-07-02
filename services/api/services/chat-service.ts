@@ -1,74 +1,11 @@
+import { query } from '../lib/db.js';
 import { ENV } from '../_core/env.js';
 import { streamBailianAppChat } from './bailian-app-service.js';
 import { retrieve } from './knowledge-base-service.js';
 import { streamGeneralChat } from './general-model-service.js';
-import { createSupabaseClient } from '../lib/supabase.js';
 
-const supabase = createSupabaseClient(
-  ENV.supabaseUrl,
-  ENV.supabaseServiceRoleKey || ENV.supabaseAnonKey
-);
-
-// 自动建表
-export async function ensureChatTables() {
-  try {
-    // 检测表是否存在
-    const { error: checkErr } = await supabase.from('chat_sessions').select('id').limit(1);
-    if (!checkErr) {
-      console.log('[chat] 表已存在，跳过创建');
-      return;
-    }
-
-    console.log('[chat] 创建聊天表...');
-
-    // 使用 Supabase SQL API 创建表（通过 RPC 或直接用 REST）
-    // 由于 anon key 无法执行 DDL，这里通过 Supabase Management API 或手动处理
-    // 改用 fetch 直接调用 Supabase 的 PostgreSQL 接口
-    const sql = `
-      CREATE TABLE IF NOT EXISTS chat_sessions (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        corp_id text DEFAULT '',
-        emp_id text NOT NULL DEFAULT 'visitor',
-        title text NOT NULL DEFAULT '新对话',
-        created_at timestamptz DEFAULT now(),
-        updated_at timestamptz DEFAULT now()
-      );
-      CREATE TABLE IF NOT EXISTS chat_messages (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        session_id uuid NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
-        role text NOT NULL CHECK (role IN ('user', 'assistant')),
-        content text NOT NULL DEFAULT '',
-        sources jsonb,
-        created_at timestamptz DEFAULT now()
-      );
-      CREATE INDEX IF NOT EXISTS idx_chat_sessions_emp_id ON chat_sessions(emp_id);
-      CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated ON chat_sessions(updated_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id, created_at);
-      ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
-      ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
-      CREATE POLICY "Allow all on chat_sessions" ON chat_sessions FOR ALL USING (true) WITH CHECK (true);
-      CREATE POLICY "Allow all on chat_messages" ON chat_messages FOR ALL USING (true) WITH CHECK (true);
-    `;
-
-    const res = await fetch(`${ENV.supabaseUrl}/rest/v1/rpc/`, {
-      method: 'POST',
-      headers: {
-        apikey: ENV.supabaseAnonKey,
-        Authorization: `Bearer ${ENV.supabaseAnonKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query: sql }),
-    });
-
-    if (!res.ok) {
-      console.warn('[chat] 无法自动建表，请在 Supabase Dashboard 手动执行 supabase/migration/009_chat_tables.sql');
-    } else {
-      console.log('[chat] 表创建成功');
-    }
-  } catch (e) {
-    console.warn('[chat] 自动建表失败，请在 Supabase Dashboard 手动执行 supabase/migration/009_chat_tables.sql');
-  }
-}
+// 注：表的创建由 lib/migrations.ts 在启动时统一管理（deploy/db/migrations/*.sql），
+// 本文件只负责读写。
 
 interface ChatMessage {
   id: string;
@@ -90,14 +27,10 @@ interface ChatSession {
 
 // 获取或创建用户会话
 export async function listSessions(empId: string): Promise<ChatSession[]> {
-  const { data, error } = await supabase
-    .from('chat_sessions')
-    .select('*')
-    .eq('emp_id', empId)
-    .order('updated_at', { ascending: false });
-
-  if (error) throw error;
-  return data || [];
+  return query<ChatSession>(
+    `SELECT * FROM chat_sessions WHERE emp_id = $1 ORDER BY updated_at DESC`,
+    [empId],
+  );
 }
 
 export async function createSession(
@@ -108,65 +41,59 @@ export async function createSession(
   const removedEmptyIds: string[] = [];
 
   // 清理：删除该用户所有「没有任何消息」的空会话，避免空对话一直占位（随后新建一个全新的替代）
-  const { data: userSessions } = await supabase
-    .from('chat_sessions')
-    .select('id')
-    .eq('emp_id', empId)
-    .order('created_at', { ascending: false })
-    .limit(50);
+  const userSessions = await query<{ id: string }>(
+    `SELECT id FROM chat_sessions WHERE emp_id = $1 ORDER BY created_at DESC LIMIT 50`,
+    [empId],
+  );
 
-  if (userSessions && userSessions.length > 0) {
-    const { data: withMsg } = await supabase
-      .from('chat_messages')
-      .select('session_id')
-      .in('session_id', userSessions.map((s) => s.id));
-    const busy = new Set((withMsg || []).map((m) => m.session_id));
-    const emptyIds = userSessions.filter((s) => !busy.has(s.id)).map((s) => s.id);
+  if (userSessions.length > 0) {
+    const sessionIds = userSessions.map((s) => s.id);
+    const withMsg = await query<{ session_id: string }>(
+      `SELECT DISTINCT session_id FROM chat_messages WHERE session_id = ANY($1::uuid[])`,
+      [sessionIds],
+    );
+    const busy = new Set(withMsg.map((m) => m.session_id));
+    const emptyIds = sessionIds.filter((id) => !busy.has(id));
     if (emptyIds.length > 0) {
       // chat_messages 对 chat_sessions 有 ON DELETE CASCADE，删会话即联动清消息
-      const { error: delErr } = await supabase.from('chat_sessions').delete().in('id', emptyIds);
-      if (!delErr) removedEmptyIds.push(...emptyIds);
+      await query(`DELETE FROM chat_sessions WHERE id = ANY($1::uuid[])`, [emptyIds]);
+      removedEmptyIds.push(...emptyIds);
     }
   }
 
-  const { data, error } = await supabase
-    .from('chat_sessions')
-    .insert({ emp_id: empId, corp_id: corpId, title, updated_at: new Date().toISOString() })
-    .select()
-    .single();
+  const rows = await query<ChatSession>(
+    `INSERT INTO chat_sessions (emp_id, corp_id, title, updated_at)
+     VALUES ($1, $2, $3, $4)
+     RETURNING *`,
+    [empId, corpId, title, new Date().toISOString()],
+  );
 
-  if (error) throw error;
-  return { session: data, removedEmptyIds };
+  return { session: rows[0], removedEmptyIds };
 }
 
 export async function deleteSession(sessionId: string, empId: string): Promise<void> {
-  // 删除消息
-  await supabase.from('chat_messages').delete().eq('session_id', sessionId);
-  // 删除会话
-  const { error } = await supabase.from('chat_sessions').delete().eq('id', sessionId).eq('emp_id', empId);
-  if (error) throw error;
+  // chat_messages ON DELETE CASCADE 会自动清消息
+  await query(
+    `DELETE FROM chat_sessions WHERE id = $1 AND emp_id = $2`,
+    [sessionId, empId],
+  );
 }
 
 export async function getMessages(sessionId: string): Promise<ChatMessage[]> {
-  const { data, error } = await supabase
-    .from('chat_messages')
-    .select('*')
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: true });
-
-  if (error) throw error;
-  return data || [];
+  return query<ChatMessage>(
+    `SELECT * FROM chat_messages WHERE session_id = $1 ORDER BY created_at ASC`,
+    [sessionId],
+  );
 }
 
 export async function saveMessage(sessionId: string, role: string, content: string, sources?: any): Promise<ChatMessage> {
-  const { data, error } = await supabase
-    .from('chat_messages')
-    .insert({ session_id: sessionId, role, content, sources })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+  const rows = await query<ChatMessage>(
+    `INSERT INTO chat_messages (session_id, role, content, sources)
+     VALUES ($1, $2, $3, $4::jsonb)
+     RETURNING *`,
+    [sessionId, role, content, sources ? JSON.stringify(sources) : null],
+  );
+  return rows[0];
 }
 
 // 通用模型兜底时的人设（无知识库 / 未命中知识库时使用）
@@ -252,10 +179,10 @@ export async function* streamChat(
   }
 
   // 6. 更新会话时间
-  await supabase
-    .from('chat_sessions')
-    .update({ updated_at: new Date().toISOString() })
-    .eq('id', sessionId);
+  await query(
+    `UPDATE chat_sessions SET updated_at = $1 WHERE id = $2`,
+    [new Date().toISOString(), sessionId],
+  );
 
   console.log(`[聊天] 会话 ${sessionId} 处理完成`);
 }
@@ -273,40 +200,28 @@ interface ActivityRecommend {
 
 // 获取用户最近的活动推荐
 export async function getLastActivityRecommend(empId: string): Promise<ActivityRecommend | null> {
-  const { data, error } = await supabase
-    .from('activity_recommends')
-    .select('*')
-    .eq('emp_id', empId)
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  if (error) throw error;
-  return data && data.length > 0 ? data[0] : null;
+  const rows = await query<ActivityRecommend>(
+    `SELECT * FROM activity_recommends WHERE emp_id = $1 ORDER BY created_at DESC LIMIT 1`,
+    [empId],
+  );
+  return rows.length > 0 ? rows[0] : null;
 }
 
 // 获取用户的活动推荐历史列表（按时间倒序，全部保留）
 export async function listActivityRecommends(empId: string, limit = 50): Promise<ActivityRecommend[]> {
-  const { data, error } = await supabase
-    .from('activity_recommends')
-    .select('*')
-    .eq('emp_id', empId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error) throw error;
-  return data || [];
+  return query<ActivityRecommend>(
+    `SELECT * FROM activity_recommends WHERE emp_id = $1 ORDER BY created_at DESC LIMIT $2`,
+    [empId, limit],
+  );
 }
 
 // 删除单条活动推荐（带 emp_id 校验，防越权）
 export async function deleteActivityRecommend(id: string, empId: string): Promise<boolean> {
-  const { error, count } = await supabase
-    .from('activity_recommends')
-    .delete({ count: 'exact' })
-    .eq('id', id)
-    .eq('emp_id', empId);
-
-  if (error) throw error;
-  return (count ?? 0) > 0;
+  const rows = await query<{ id: string }>(
+    `DELETE FROM activity_recommends WHERE id = $1 AND emp_id = $2 RETURNING id`,
+    [id, empId],
+  );
+  return rows.length > 0;
 }
 
 // 保存活动推荐（保留全部历史，不再删除旧记录）
@@ -318,68 +233,13 @@ export async function saveActivityRecommend(
 ): Promise<ActivityRecommend> {
   console.log('[activity-recommend] 开始保存推荐:', { empId, contentLength: content.length, sourcesCount: sources.length });
 
-  const { data, error } = await supabase
-    .from('activity_recommends')
-    .insert({
-      emp_id: empId,
-      corp_id: corpId,
-      content,
-      sources,
-    })
-    .select()
-    .single();
+  const rows = await query<ActivityRecommend>(
+    `INSERT INTO activity_recommends (emp_id, corp_id, content, sources)
+     VALUES ($1, $2, $3, $4::jsonb)
+     RETURNING *`,
+    [empId, corpId, content, JSON.stringify(sources)],
+  );
 
-  if (error) {
-    console.error('[activity-recommend] 保存失败:', error);
-    throw error;
-  }
-
-  console.log('[activity-recommend] 保存成功:', data.id);
-  return data;
-}
-
-// 在 ensureChatTables 中添加活动推荐表
-export async function ensureActivityRecommendTable() {
-  try {
-    // 检测表是否存在
-    const { error: checkErr } = await supabase.from('activity_recommends').select('id').limit(1);
-    if (!checkErr) {
-      console.log('[activity-recommend] 表已存在，跳过创建');
-      return;
-    }
-
-    console.log('[activity-recommend] 创建活动推荐表...');
-
-    const sql = `
-      CREATE TABLE IF NOT EXISTS activity_recommends (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        corp_id text DEFAULT '',
-        emp_id text NOT NULL DEFAULT 'visitor',
-        content text NOT NULL DEFAULT '',
-        sources jsonb DEFAULT '[]'::jsonb,
-        created_at timestamptz DEFAULT now()
-      );
-      CREATE INDEX IF NOT EXISTS idx_activity_recommends_emp_id ON activity_recommends(emp_id);
-      ALTER TABLE activity_recommends ENABLE ROW LEVEL SECURITY;
-      CREATE POLICY "Allow all on activity_recommends" ON activity_recommends FOR ALL USING (true) WITH CHECK (true);
-    `;
-
-    const res = await fetch(`${ENV.supabaseUrl}/rest/v1/rpc/`, {
-      method: 'POST',
-      headers: {
-        apikey: ENV.supabaseAnonKey,
-        Authorization: `Bearer ${ENV.supabaseAnonKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query: sql }),
-    });
-
-    if (!res.ok) {
-      console.warn('[activity-recommend] 无法自动建表');
-    } else {
-      console.log('[activity-recommend] 表创建成功');
-    }
-  } catch (e) {
-    console.warn('[activity-recommend] 自动建表失败');
-  }
+  console.log('[activity-recommend] 保存成功:', rows[0].id);
+  return rows[0];
 }
