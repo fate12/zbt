@@ -8,19 +8,26 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /**
  * 迁移文件目录解析。
  *
- * 兼容两种运行形态：
- * - 源码运行（tsx）：services/api/lib → 仓库根 = ../../  → ../../deploy/db/migrations
- * - 编译运行（dist）：services/api/dist/lib → 仓库根 = ../../../ → ../../../deploy/db/migrations
- *   （部署时整个仓库已 checkout，deploy/ 在仓库根）
+ * 从 __dirname 逐级向上查找 `deploy/db/migrations`，兼容任意部署目录深度
+ * （源码运行在 services/api/lib、编译运行在 services/api/dist/lib、
+ *   或打包到更深路径都能命中仓库根的 deploy/db/migrations）。
  *
- * 取第一个实际存在的候选目录。
+ * 也可用环境变量 MIGRATIONS_DIR 显式指定，优先级最高。
  */
 function resolveMigrationsDir(): string {
-  const candidates = [
-    path.resolve(__dirname, '..', '..', 'deploy', 'db', 'migrations'),
-    path.resolve(__dirname, '..', '..', '..', 'deploy', 'db', 'migrations'),
-  ];
-  return candidates.find((p) => fs.existsSync(p)) ?? candidates[0];
+  const override = process.env.MIGRATIONS_DIR;
+  if (override) return override;
+
+  let dir = __dirname;
+  for (let i = 0; i < 10; i++) {
+    const candidate = path.join(dir, 'deploy', 'db', 'migrations');
+    if (fs.existsSync(candidate)) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) break; // 到达文件系统根
+    dir = parent;
+  }
+  // 兜底：返回最可能的位置，runMigrations 会再判存在性并告警
+  return path.resolve(__dirname, '..', '..', '..', 'deploy', 'db', 'migrations');
 }
 
 /**
